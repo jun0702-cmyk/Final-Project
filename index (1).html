@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Korean Killer (AI Powered)</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+
+    <script src="edge-impulse-standalone.js"></script>
+
+    <style>
+        /* KK 디자인 스타일 (그대로 유지) */
+        body { margin: 0; padding: 0; display: flex; height: 100vh; font-family: 'Segoe UI', sans-serif; overflow: hidden; background: #1a1a1a; color: #eee; }
+        #sidebar { width: 260px; background-color: #2c3e50; padding: 20px; display: flex; flex-direction: column; gap: 15px; z-index: 100; box-shadow: 2px 0 10px rgba(0,0,0,0.5); flex-shrink: 0; }
+        .title-container { text-align: center; margin-bottom: 10px; border-bottom: 1px solid #444; padding-bottom: 20px; }
+        #sidebar h2 { margin: 0; color: #bdc3c7; font-size: 1rem; text-transform: uppercase; letter-spacing: 3px; font-weight: normal; }
+        #kk-logo { font-size: 6rem; font-weight: 900; color: #e74c3c; margin: 0; line-height: 1; letter-spacing: -5px; text-shadow: 0 0 20px rgba(231, 76, 60, 0.6); font-family: 'Arial Black', sans-serif; }
+        input, button { padding: 10px; border-radius: 8px; border: 1px solid #555; width: 100%; box-sizing: border-box; background-color: #34495e; color: #eee; }
+        button { cursor: pointer; font-weight: bold; transition: 0.2s; background: #e74c3c; color: white; border: none; }
+        button:hover { opacity: 0.9; transform: scale(1.02); background-color: #c0392b; }
+        #btn-stop { background-color: #c0392b; display: none; }
+        #btn-list { background-color: #3498db; }
+        #btn-prof { background-color: #95a5a6; margin-top: auto; }
+        #prof-controls { border-top: 1px solid #7f8c8d; padding-top: 15px; display: none; }
+        #prof-controls p { color: #e74c3c; font-size: 0.9rem; margin-top: 0; }
+        .btn-delete-all { background-color: #e74c3c !important; border: 2px solid white !important; margin-top: 10px; }
+        #main-content { flex-grow: 1; position: relative; background: #000; display: flex; justify-content: center; align-items: center; gap: 60px; background-image: radial-gradient(circle at 50% 50%, rgba(231, 76, 60, 0.15) 0%, transparent 60%), linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%), repeating-linear-gradient(45deg, #1a1a1a 0, #1a1a1a 10px, #222 10px, #222 20px); }
+        .side-img { height: 60%; max-height: 600px; width: auto; object-fit: contain; border: 2px solid #444; box-shadow: 0 0 30px rgba(0,0,0,0.8); opacity: 0.9; transition: 0.3s; }
+        .side-img.alert-mode { border-color: #e74c3c; box-shadow: 0 0 50px rgba(231, 76, 60, 0.8); transform: scale(1.05); }
+        #center-stage { position: relative; display: flex; justify-content: center; align-items: center; width: 500px; height: 500px; }
+        #camera-wrapper { display: none; width: 500px; height: 500px; border-radius: 50%; overflow: hidden; border: 5px solid #e74c3c; position: relative; background: black; box-shadow: 0 0 30px rgba(231, 76, 60, 0.6), inset 0 0 50px rgba(231, 76, 60, 0.4); }
+        #camera-wrapper::before { content: ''; position: absolute; top: 50%; left: 50%; width: 120%; height: 120%; transform: translate(-50%, -50%); background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><circle cx="250" cy="250" r="240" fill="none" stroke="rgba(231, 76, 60, 0.5)" stroke-width="2" stroke-dasharray="10 5"/><circle cx="250" cy="250" r="180" fill="none" stroke="rgba(231, 76, 60, 0.3)" stroke-width="1"/><path d="M250 50 L250 450 M50 250 L450 250" stroke="rgba(231, 76, 60, 0.4)" stroke-width="1"/><circle cx="250" cy="250" r="50" fill="rgba(231, 76, 60, 0.2)"/></svg>'); background-repeat: no-repeat; background-position: center; pointer-events: none; z-index: 1; }
+        canvas { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); position: relative; z-index: 0; }
+        #input_video { display: none; }
+        #status-panel { position: absolute; top: -60px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 10; width: 100%; justify-content: center; }
+        .status-box { background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 30px; color: #aaa; font-weight: bold; border: 1px solid #555; display: flex; align-items: center; gap: 10px; transition: 0.3s; white-space: nowrap; }
+        .active-red { color: white !important; background: rgba(255, 0, 0, 0.9) !important; border-color: red !important; box-shadow: 0 0 20px red; }
+        .active-green { color: white !important; background: rgba(0, 200, 0, 0.9) !important; border-color: lime !important; box-shadow: 0 0 15px lime; }
+        #alert-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 0, 0, 0.95); color: white; padding: 30px 60px; border-radius: 50px; font-size: 3rem; font-weight: bold; display: none; z-index: 200; box-shadow: 0 0 100px red; animation: pulse 0.3s infinite alternate; text-align: center; white-space: nowrap; }
+        @keyframes pulse { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(1.1); } }
+        #loading-msg { color: #e74c3c; font-weight: bold; display: none; margin-top: 10px; }
+        #list-panel { position: fixed; left: -400px; top: 0; bottom: 0; width: 300px; background: rgba(44, 62, 80, 0.98); padding: 20px; transition: 0.3s; z-index: 50; overflow-y: auto; box-shadow: 5px 0 15px rgba(0,0,0,0.5); color: #eee; }
+        #list-panel.open { left: 300px; } 
+        #list-panel h3 { color: #e74c3c; border-bottom: 1px solid #555; padding-bottom: 10px; }
+        .student-item { background: #34495e; padding: 15px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #555; display: flex; flex-direction: column; gap: 5px; transition: 0.3s; }
+        .student-item.problematic { background: linear-gradient(135deg, #621010 0%, #3a0000 100%); border: 2px solid #ff0000; box-shadow: 0 0 10px rgba(255, 0, 0, 0.4); animation: shake 0.5s; }
+        @keyframes shake { 0% { transform: translateX(0); } 25% { transform: translateX(-2px); } 50% { transform: translateX(2px); } 100% { transform: translateX(0); } }
+        .item-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+        .student-info b { font-size: 1.1rem; }
+        .student-info span { font-size: 0.9rem; color: #bbb; }
+        .count-badge { background: #e67e22; color: white; padding: 4px 10px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 0.9rem; min-width: 25px; text-align: center; }
+        .count-badge:hover { background: #d35400; }
+        .problematic .count-badge { background: #ff0000; animation: pulse-badge 1s infinite; }
+        @keyframes pulse-badge { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+        .timestamp-list { display: none; margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; font-size: 0.8rem; color: #aaa; max-height: 150px; overflow-y: auto; }
+        .timestamp-list div { border-bottom: 1px solid #444; padding: 4px 0; }
+        .timestamp-list div:last-child { border-bottom: none; }
+        .del-btn { background: #c0392b; color: white; border: none; padding: 5px; font-size: 0.8rem; width: 100%; margin-top: 10px; border-radius: 4px; display: none; }
+        .del-btn:hover { background: #a93226; }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <div class="title-container">
+            <h2>Korean Killer</h2>
+            <div id="kk-logo">KK</div>
+        </div>
+        <input type="text" id="input-name" placeholder="Name">
+        <input type="text" id="input-id" placeholder="Student ID">
+        <button id="btn-start" onclick="startSystem()">▶ Start AI Monitoring</button>
+        <div id="loading-msg">Initializing AI...</div>
+        <button id="btn-stop" onclick="location.reload()">⏹ Stop System</button>
+        <button id="btn-list" onclick="toggleList()">📋 Detection List</button>
+        <div id="prof-controls">
+            <p>👮‍♂️ [Professor Mode]</p>
+            <input type="text" id="add-name" placeholder="Name" style="margin-bottom:5px;">
+            <input type="text" id="add-id" placeholder="ID" style="margin-bottom:5px;">
+            <button onclick="manualAdd()" style="background:#ff9800;">Manual Add</button>
+            <hr style="border-color:#555; margin: 15px 0;">
+            <button onclick="deleteAllData()" class="btn-delete-all">⚠️ DELETE ALL DATA</button>
+        </div>
+        <button id="btn-prof" onclick="authProfessor()">🔒 Admin Auth</button>
+    </div>
+
+    <div id="list-panel">
+        <h3>🚨 Detected Students</h3>
+        <ul id="student-list" style="list-style: none; padding: 0;"></ul>
+    </div>
+
+    <div id="main-content">
+        <img src="1.jpg" id="monitor-image" class="side-img" alt="Surveillance Monitor">
+        <div id="center-stage">
+            <div id="placeholder" style="text-align:center;">
+                <h1 style="color:white;">System Standby</h1>
+                <p style="color:#aaa;">Please enter your Name and ID to start.</p>
+            </div>
+            <div id="status-panel" style="display:none;">
+                <div id="status-audio" class="status-box">🎤 AI Standby</div>
+                <div id="status-video" class="status-box">🤐 0%</div>
+            </div>
+            <div id="camera-wrapper">
+                <canvas id="output_canvas"></canvas>
+                <div id="alert-overlay">🚨 DETECTED!</div>
+            </div>
+        </div>
+    </div>
+    <video id="input_video" playsinline></video>
+
+    <script>
+        var Module = typeof Module !== 'undefined' ? Module : {};
+        let classifierInitialized = false;
+        Module.onRuntimeInitialized = function() { classifierInitialized = true; };
+
+        class EdgeImpulseClassifier {
+            constructor() { this._module = Module; }
+            init() {
+                if (classifierInitialized === true) return Promise.resolve();
+                return new Promise((resolve, reject) => {
+                    if (!this._module || !this._module.onRuntimeInitialized) { if (window.Module) this._module = window.Module; }
+                    this._module.onRuntimeInitialized = () => {
+                        classifierInitialized = true;
+                        this._module.init();
+                        resolve();
+                    };
+                });
+            }
+            classify(rawData, debug = false) {
+                if (!classifierInitialized) throw new Error('Module is not initialized');
+                if (!this._module._malloc && window.Module) { this._module = window.Module; }
+                const obj = this._arrayToHeap(rawData);
+                let ret = this._module.run_classifier(obj.buffer.byteOffset, rawData.length, debug);
+                this._module._free(obj.ptr);
+                if (ret.result !== 0) throw new Error('Classification failed (err code: ' + ret.result + ')');
+                let jsResult = { results: [] };
+                for (let cx = 0; cx < ret.size(); cx++) {
+                    let c = ret.get(cx);
+                    jsResult.results.push({ label: c.label, value: c.value });
+                    c.delete();
+                }
+                ret.delete();
+                return jsResult;
+            }
+            getProperties() {
+                if (!this._module.get_properties && window.Module) { this._module = window.Module; }
+                return this._convertToOrdinaryJsObject(this._module.get_properties(), this._module.emcc_classification_properties_t.prototype);
+            }
+            _arrayToHeap(data) {
+                let typedArray = new Float32Array(data);
+                let numBytes = typedArray.length * typedArray.BYTES_PER_ELEMENT;
+                let ptr = this._module._malloc(numBytes);
+                let heapBytes = new Uint8Array(this._module.HEAPU8.buffer, ptr, numBytes);
+                heapBytes.set(new Uint8Array(typedArray.buffer));
+                return { ptr: ptr, buffer: heapBytes };
+            }
+            _convertToOrdinaryJsObject(emboundObj, prototype) {
+                let newObj = { };
+                for (const key of Object.getOwnPropertyNames(prototype)) {
+                    const descriptor = Object.getOwnPropertyDescriptor(prototype, key);
+                    if (descriptor && typeof descriptor.get === 'function') { newObj[key] = emboundObj[key]; }
+                }
+                return newObj;
+            }
+        }
+    </script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDaLlrTKsMCpCzVgBW9icTmEPcuO_zoWVY",
+            authDomain: "acdt-project.firebaseapp.com",
+            projectId: "acdt-project",
+            storageBucket: "acdt-project.firebasestorage.app",
+            messagingSenderId: "243281762920",
+            appId: "1:243281762920:web:6641d9eadfe1e93442f9dd",
+            measurementId: "G-J9TVZXN3LE"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let isRunning = false;
+        let userName = "", userId = "";
+        let isAdminMode = false;
+        let classifier = null; 
+
+        let lastMouthOpenTime = 0; 
+        let lastKoreanTime = 0;    
+        let lastTriggerTime = 0;   
+        const TIME_WINDOW = 3000; 
+        let alertImageTimeout = null;
+
+        // ★★★ 설정: Edge Impulse 레이블 (학습시킨 이름으로 수정 필요) ★★★
+        const TARGET_LABEL = "korean"; 
+        const CONFIDENCE_THRESHOLD = 0.8; 
+
+        async function startSystem() {
+            userName = document.getElementById('input-name').value;
+            userId = document.getElementById('input-id').value;
+            if (!userName || !userId) { alert("Please enter Name and Student ID!"); return; }
+
+            const btn = document.getElementById('btn-start');
+            const msg = document.getElementById('loading-msg');
+            btn.disabled = true;
+            msg.style.display = 'block';
+            msg.innerText = "Step 1: Loading AI Model...";
+
+            try {
+                // Edge Impulse 초기화
+                classifier = new EdgeImpulseClassifier();
+                await classifier.init();
+                
+                msg.innerText = "Step 2: Requesting Camera...";
+                await startFaceMesh();
+                
+                msg.innerText = "Step 3: Requesting Microphone...";
+                await startAudioProcessing();
+
+                msg.style.display = 'none';
+                btn.style.display = 'none';
+                document.getElementById('btn-stop').style.display = 'block';
+                document.getElementById('placeholder').style.display = 'none';
+                document.getElementById('camera-wrapper').style.display = 'block';
+                document.getElementById('status-panel').style.display = 'flex';
+                isRunning = true;
+
+            } catch (err) {
+                console.error(err);
+                alert("Error initializing AI: " + err.message);
+                location.reload();
+            }
+        }
+
+        async function startAudioProcessing() {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(stream);
+            const sampleRate = 16000; 
+            const processor = audioContext.createScriptProcessor(4096, 1, 1);
+            let audioBuffer = new Float32Array(sampleRate * 1); 
+            let bufferIdx = 0;
+
+            source.connect(processor);
+            processor.connect(audioContext.destination);
+
+            processor.onaudioprocess = function(e) {
+                if (!isRunning) return;
+                const inputData = e.inputBuffer.getChannelData(0);
+                
+                // 버퍼 채우기 (간이 구현)
+                for (let i = 0; i < inputData.length; i++) {
+                    if (bufferIdx < audioBuffer.length) {
+                        audioBuffer[bufferIdx] = inputData[i];
+                        bufferIdx++;
+                    } else {
+                        runClassification(audioBuffer);
+                        bufferIdx = 0;
+                    }
+                }
+            };
+        }
+
+        async function runClassification(data) {
+            try {
+                if(!classifier) return;
+                let results = classifier.classify(data);
+                let koreanProb = 0;
+                let topLabel = "Noise";
+                
+                results.results.forEach(r => {
+                    if (r.label === TARGET_LABEL) koreanProb = r.value;
+                    if (r.value > 0.5) topLabel = r.label;
+                });
+
+                const audioStatus = document.getElementById('status-audio');
+                if (koreanProb > CONFIDENCE_THRESHOLD) {
+                    lastKoreanTime = Date.now();
+                    audioStatus.innerText = `🔊 KOREAN (${(koreanProb*100).toFixed(0)}%)`;
+                    audioStatus.className = "status-box active-red";
+                    checkViolation();
+                } else {
+                    if (Date.now() - lastKoreanTime > 1500) {
+                        audioStatus.innerText = `🎤 ${topLabel}`;
+                        audioStatus.className = "status-box";
+                    }
+                }
+            } catch (ex) { console.log("Classification error:", ex); }
+        }
+
+        async function startFaceMesh() {
+            const videoElement = document.getElementById('input_video');
+            const canvasElement = document.getElementById('output_canvas');
+            const ctx = canvasElement.getContext('2d');
+            const faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
+            faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5 });
+            
+            faceMesh.onResults((results) => {
+                if (!isRunning) return;
+                canvasElement.width = 500; canvasElement.height = 500;
+                ctx.fillStyle = "black"; ctx.fillRect(0, 0, 500, 500);
+                if (results.image && results.multiFaceLandmarks.length > 0) {
+                    const lm = results.multiFaceLandmarks[0];
+                    const sW = videoElement.videoWidth; const sH = videoElement.videoHeight;
+                    const upper = lm[13]; const lower = lm[14];
+                    const dist = Math.abs(upper.y - lower.y) * 100;
+                    const MAX_OPEN_DIST = 30; 
+                    let percent = (dist / MAX_OPEN_DIST) * 100;
+                    percent = Math.max(0, Math.min(percent, 100));
+                    const MOUTH_LIMIT = 5.0; 
+                    const isMouthOpenNow = (dist > MOUTH_LIMIT);
+                    const vStatus = document.getElementById('status-video');
+                    if (isMouthOpenNow) {
+                        lastMouthOpenTime = Date.now(); 
+                        vStatus.innerText = `👄 ${percent.toFixed(0)}% (Open)`;
+                        vStatus.className = "status-box active-green"; 
+                        checkViolation(); 
+                    } else {
+                        vStatus.innerText = `🤐 ${percent.toFixed(0)}% (Closed)`;
+                        vStatus.className = "status-box";
+                    }
+                    const zoom = 4.0; const cw = sW/zoom; const ch = sH/zoom;
+                    let cx = ((upper.x + lower.x)/2 * sW) - cw/2;
+                    let cy = ((upper.y + lower.y)/2 * sH) - ch/2;
+                    ctx.drawImage(results.image, cx, cy, cw, ch, 0, 0, 500, 500);
+                }
+            });
+            const camera = new Camera(videoElement, {
+                onFrame: async () => { await faceMesh.send({image: videoElement}); },
+                width: 1280, height: 720
+            });
+            await camera.start();
+        }
+
+        function checkViolation() {
+            const now = Date.now();
+            if (now - lastTriggerTime < 5000) return;
+            const isKoreanRecent = (now - lastKoreanTime < TIME_WINDOW);
+            const isMouthRecent = (now - lastMouthOpenTime < TIME_WINDOW);
+            if (isKoreanRecent && isMouthRecent) { triggerDetection(); }
+        }
+
+        function triggerDetection() {
+            lastTriggerTime = Date.now(); 
+            const overlay = document.getElementById('alert-overlay');
+            overlay.style.display = 'block';
+            overlay.innerText = `🚨 DETECTED!`;
+            document.getElementById('status-video').className = "status-box active-red";
+            setTimeout(() => overlay.style.display = 'none', 2000);
+            const img = document.getElementById('monitor-image');
+            img.src = "2.jpg"; 
+            img.classList.add('alert-mode');
+            if (alertImageTimeout) clearTimeout(alertImageTimeout);
+            alertImageTimeout = setTimeout(() => { img.src = "1.jpg"; img.classList.remove('alert-mode'); }, 5000);
+            db.collection("detections").add({ name: userName, studentId: userId, reason: "Korean (AI) + Mouth Open", timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+        }
+
+        function toggleList() { document.getElementById('list-panel').classList.toggle('open'); }
+        function authProfessor() {
+            if (prompt("Enter Admin Password:") === "kyj") {
+                alert("✅ Admin Mode Activated");
+                isAdminMode = true;
+                document.getElementById('prof-controls').style.display = 'block';
+                document.getElementById('btn-prof').style.display = 'none';
+                loadList(); 
+            } else { alert("❌ Wrong Password"); }
+        }
+        function manualAdd() {
+            const nameInput = document.getElementById('add-name');
+            const idInput = document.getElementById('add-id');
+            const name = nameInput.value.trim();
+            const id = idInput.value.trim();
+            if (!name || !id) { alert("Please enter both Name and ID."); return; }
+            db.collection("detections").add({ name: name, studentId: id, reason: "Manual Add (Admin)", timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { alert("✅ Added Successfully!"); nameInput.value = ""; idInput.value = ""; }).catch((error) => { alert("Error: " + error.message); });
+        }
+        async function deleteAllData() {
+            if (confirm("⚠️ WARNING: Delete ALL detection records?")) {
+                const snapshot = await db.collection("detections").get();
+                const batch = db.batch();
+                snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+                alert("All records deleted.");
+            }
+        }
+        function deleteStudent(targetId) {
+             if (confirm(`Delete records for ID: ${targetId}?`)) {
+                db.collection("detections").where("studentId", "==", targetId).get().then(snapshot => { const batch = db.batch(); snapshot.forEach(doc => batch.delete(doc.ref)); return batch.commit(); }).then(() => alert("Deleted."));
+             }
+        }
+        function loadList() {
+             db.collection("detections").orderBy("timestamp", "desc").onSnapshot(snapshot => {
+                const list = document.getElementById('student-list'); 
+                list.innerHTML = "";
+                const students = {};
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const key = data.studentId;
+                    if (!students[key]) { students[key] = { name: data.name, id: data.studentId, records: [] }; }
+                    students[key].records.push({ id: doc.id, time: data.timestamp ? new Date(data.timestamp.toDate()).toLocaleTimeString() : "Just now" });
+                });
+                Object.values(students).forEach(student => {
+                    const count = student.records.length;
+                    const isProblematic = count > 3; 
+                    const li = document.createElement('li'); 
+                    li.className = isProblematic ? 'student-item problematic' : 'student-item';
+                    li.innerHTML = `<div class="item-header"><div class="student-info"><b>${student.name} ${isProblematic ? '⚠️' : ''}</b><br><span>${student.id}</span></div><div class="count-badge" onclick="toggleTimestamps(this)">${count}</div></div><div class="timestamp-list">${student.records.map(r => `<div>🕒 ${r.time}</div>`).join('')}</div>`;
+                    if (isAdminMode) { const btn = document.createElement('button'); btn.className = 'del-btn'; btn.innerText = "Delete Student Records"; btn.style.display = "block"; btn.onclick = () => deleteStudent(student.id); li.appendChild(btn); }
+                    list.appendChild(li);
+                });
+            });
+        }
+        window.toggleTimestamps = function(element) { const tsList = element.parentElement.nextElementSibling; if (tsList.style.display === "block") { tsList.style.display = "none"; } else { tsList.style.display = "block"; } };
+        loadList(); 
+    </script>
+</body>
+</html>
