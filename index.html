@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Korean Killer - Ultimate</title>
+    <title>Korean Killer - Final Hybrid</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -13,159 +13,194 @@
     <script src="edge-impulse-standalone.js"></script>
 
     <style>
-        /* [기존 KK 스타일 + React UI 스타일 통합] */
-        body { margin: 0; padding: 0; display: flex; height: 100vh; font-family: 'Segoe UI', sans-serif; overflow: hidden; background: #111827; color: #eee; }
+        /* [기존 디자인 유지] */
+        body { margin: 0; padding: 0; display: flex; height: 100vh; font-family: 'Segoe UI', sans-serif; overflow: hidden; background: #1a1a1a; color: #eee; }
         
-        /* 사이드바 */
-        #sidebar { width: 260px; background-color: #1f2937; padding: 20px; display: flex; flex-direction: column; gap: 15px; z-index: 100; box-shadow: 2px 0 10px rgba(0,0,0,0.5); flex-shrink: 0; border-right: 1px solid #374151; }
-        .title-container { text-align: center; margin-bottom: 10px; border-bottom: 1px solid #4b5563; padding-bottom: 20px; }
-        #kk-logo { font-size: 6rem; font-weight: 900; color: #ef4444; margin: 0; line-height: 1; letter-spacing: -5px; text-shadow: 0 0 20px rgba(239, 68, 68, 0.6); font-family: 'Arial Black', sans-serif; }
-        input, button { padding: 10px; border-radius: 8px; border: 1px solid #4b5563; width: 100%; box-sizing: border-box; background-color: #374151; color: #eee; outline: none; }
-        button { cursor: pointer; font-weight: bold; transition: 0.2s; background: #ef4444; color: white; border: none; }
-        button:hover { opacity: 0.9; transform: scale(1.02); }
+        #sidebar { width: 260px; background-color: #2c3e50; padding: 20px; display: flex; flex-direction: column; gap: 15px; z-index: 100; box-shadow: 2px 0 10px rgba(0,0,0,0.5); flex-shrink: 0; }
+        .title-container { text-align: center; margin-bottom: 10px; border-bottom: 1px solid #444; padding-bottom: 20px; }
+        #sidebar h2 { margin: 0; color: #bdc3c7; font-size: 1rem; text-transform: uppercase; letter-spacing: 3px; font-weight: normal; }
+        #kk-logo { font-size: 6rem; font-weight: 900; color: #e74c3c; margin: 0; line-height: 1; letter-spacing: -5px; text-shadow: 0 0 20px rgba(231, 76, 60, 0.6); font-family: 'Arial Black', sans-serif; }
+        input, button { padding: 10px; border-radius: 8px; border: 1px solid #555; width: 100%; box-sizing: border-box; background-color: #34495e; color: #eee; }
+        button { cursor: pointer; font-weight: bold; transition: 0.2s; background: #e74c3c; color: white; border: none; }
+        button:hover { opacity: 0.9; transform: scale(1.02); background-color: #c0392b; }
+        #btn-stop { background-color: #c0392b; display: none; }
+        #btn-list { background-color: #3498db; }
+        #btn-prof { background-color: #95a5a6; margin-top: auto; }
+        #prof-controls { border-top: 1px solid #7f8c8d; padding-top: 15px; display: none; }
+        #prof-controls p { color: #e74c3c; font-size: 0.9rem; margin-top: 0; }
+        .btn-delete-all { background-color: #e74c3c !important; border: 2px solid white !important; margin-top: 10px; }
+
+        /* Main Content */
+        #main-content { flex-grow: 1; position: relative; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; background-image: radial-gradient(circle at 50% 50%, rgba(231, 76, 60, 0.15) 0%, transparent 60%), linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%), repeating-linear-gradient(45deg, #1a1a1a 0, #1a1a1a 10px, #222 10px, #222 20px); }
+
+        /* [NEW] 버튼 컨테이너 (이미지 바로 위) */
+        #monitor-controls {
+            display: flex; gap: 10px; margin-bottom: 15px; z-index: 50;
+        }
+        .monitor-btn {
+            background: rgba(0,0,0,0.7); border: 1px solid #555; color: #bbb; 
+            padding: 8px 20px; border-radius: 20px; font-size: 0.9rem; cursor: pointer; 
+            transition: 0.2s; display: flex; align-items: center; gap: 5px;
+        }
+        .monitor-btn:hover, .monitor-btn.active { background: #3b82f6; color: white; border-color: #60a5fa; box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+
+        /* 이미지 및 카메라 영역 컨테이너 */
+        #visual-wrapper { position: relative; display: flex; justify-content: center; align-items: center; }
+
+        .side-img { height: 60vh; max-height: 600px; width: auto; object-fit: contain; border: 2px solid #444; box-shadow: 0 0 30px rgba(0,0,0,0.8); opacity: 0.9; transition: 0.3s; }
+        .side-img.alert-mode { border-color: #e74c3c; box-shadow: 0 0 50px rgba(231, 76, 60, 0.8); transform: scale(1.05); }
+
+        #center-stage { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; height: 500px; display: flex; justify-content: center; align-items: center; }
         
-        /* 메인 영역 */
-        #main-content { flex-grow: 1; position: relative; background: #000; display: flex; justify-content: center; align-items: center; gap: 20px; flex-direction: column; 
-            background-image: radial-gradient(circle at 50% 50%, rgba(220, 38, 38, 0.1) 0%, transparent 60%), linear-gradient(0deg, #111827 0%, transparent 100%);
-        }
-
-        /* [NEW] 상단 컨트롤 버튼 그룹 (이미지 바로 위) */
-        #control-bar {
-            display: flex; gap: 10px; z-index: 50; margin-bottom: 10px;
-        }
-        .ctrl-btn {
-            background: #1f2937; border: 1px solid #4b5563; color: #9ca3af; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;
-        }
-        .ctrl-btn:hover { background: #374151; color: white; }
-        .ctrl-btn.active { background: #1d4ed8; border-color: #3b82f6; color: white; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
-
-        /* 이미지 및 카메라 영역 */
-        #visual-area { position: relative; width: 600px; height: 500px; display: flex; justify-content: center; align-items: center; }
-        .side-img { height: 100%; width: auto; object-fit: contain; border: 2px solid #374151; box-shadow: 0 0 30px rgba(0,0,0,0.5); opacity: 0.9; transition: 0.3s; border-radius: 10px; }
-        .side-img.alert-mode { border-color: #ef4444; box-shadow: 0 0 50px rgba(239, 68, 68, 0.8); transform: scale(1.02); }
+        #camera-wrapper { display: none; width: 500px; height: 500px; border-radius: 50%; overflow: hidden; border: 5px solid #e74c3c; position: relative; background: black; box-shadow: 0 0 30px rgba(231, 76, 60, 0.6), inset 0 0 50px rgba(231, 76, 60, 0.4); }
+        #camera-wrapper::before { content: ''; position: absolute; top: 50%; left: 50%; width: 120%; height: 120%; transform: translate(-50%, -50%); background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><circle cx="250" cy="250" r="240" fill="none" stroke="rgba(231, 76, 60, 0.5)" stroke-width="2" stroke-dasharray="10 5"/><circle cx="250" cy="250" r="180" fill="none" stroke="rgba(231, 76, 60, 0.3)" stroke-width="1"/><path d="M250 50 L250 450 M50 250 L450 250" stroke="rgba(231, 76, 60, 0.4)" stroke-width="1"/><circle cx="250" cy="250" r="50" fill="rgba(231, 76, 60, 0.2)"/></svg>'); background-repeat: no-repeat; background-position: center; pointer-events: none; z-index: 1; }
+        canvas { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); position: relative; z-index: 0; }
         
-        /* 줌 카메라 (숨김 상태였다가 시작하면 나옴) */
-        #camera-wrapper { 
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 400px; height: 400px; border-radius: 50%; overflow: hidden; 
-            border: 4px solid #ef4444; background: black; display: none;
-            box-shadow: 0 0 30px rgba(239, 68, 68, 0.5);
-        }
-        canvas { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-
-        /* [NEW] 설정 패널 (React 스타일 이식) */
-        #settings-panel {
-            position: absolute; top: 60px; right: -320px; width: 300px; 
-            background: rgba(31, 41, 55, 0.95); border: 1px solid #4b5563; 
-            border-radius: 12px; padding: 20px; backdrop-filter: blur(10px);
-            transition: 0.3s; z-index: 60; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            display: flex; flex-direction: column; gap: 15px; opacity: 0; pointer-events: none;
-        }
-        #settings-panel.show { right: 20px; opacity: 1; pointer-events: all; }
-        .setting-item { display: flex; flex-direction: column; gap: 5px; }
-        .setting-header { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: bold; color: #9ca3af; }
-        .setting-val { color: #60a5fa; font-family: monospace; }
-        input[type=range] { width: 100%; height: 4px; background: #4b5563; border-radius: 2px; accent-color: #60a5fa; }
-
-        /* [NEW] 로그 패널 (React 스타일 이식) */
-        #log-panel {
-            position: absolute; top: 60px; left: -320px; width: 300px; height: 400px;
-            background: rgba(31, 41, 55, 0.95); border: 1px solid #4b5563; 
-            border-radius: 12px; padding: 15px; backdrop-filter: blur(10px);
-            transition: 0.3s; z-index: 60; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            display: flex; flex-direction: column; opacity: 0; pointer-events: none;
-        }
-        #log-panel.show { left: 20px; opacity: 1; pointer-events: all; }
-        #log-list { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
-        .log-item { 
-            background: rgba(55, 65, 81, 0.5); padding: 8px; border-radius: 6px; font-size: 0.75rem; 
-            display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #4b5563;
-        }
-        .log-item.violation { border-left-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
-        .log-time { color: #9ca3af; font-family: monospace; }
-        .log-badge { padding: 2px 6px; border-radius: 4px; font-weight: bold; color: white; }
-
-        /* Alert Overlay */
-        #alert-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(220, 38, 38, 0.9); color: white; padding: 20px 40px; border-radius: 50px; font-size: 2rem; font-weight: bold; display: none; z-index: 200; box-shadow: 0 0 50px red; animation: pulse 0.3s infinite alternate; white-space: nowrap; }
+        /* Status Panel (기존 디자인 유지, 로직만 연결) */
+        #status-panel { position: absolute; top: -60px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 10; width: 100%; justify-content: center; }
+        .status-box { background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 30px; color: #aaa; font-weight: bold; border: 1px solid #555; display: flex; align-items: center; gap: 10px; transition: 0.3s; white-space: nowrap; }
+        .active-red { color: white !important; background: rgba(255, 0, 0, 0.9) !important; border-color: red !important; box-shadow: 0 0 20px red; }
+        .active-green { color: white !important; background: rgba(0, 200, 0, 0.9) !important; border-color: lime !important; box-shadow: 0 0 15px lime; }
+        
+        #alert-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 0, 0, 0.95); color: white; padding: 30px 60px; border-radius: 50px; font-size: 3rem; font-weight: bold; display: none; z-index: 200; box-shadow: 0 0 100px red; animation: pulse 0.3s infinite alternate; text-align: center; white-space: nowrap; }
         @keyframes pulse { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(1.1); } }
 
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #1f2937; }
-        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+        /* [NEW] Settings Panel (Overlay) */
+        #panel-settings {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 280px; background: rgba(20, 20, 20, 0.95); border: 1px solid #444;
+            border-radius: 12px; padding: 20px; z-index: 60; display: none;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+        .panel-header { display: flex; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid #444; padding-bottom: 10px; color: #3b82f6; font-weight: bold; }
+        .setting-row { margin-bottom: 12px; }
+        .setting-label { display: flex; justify-content: space-between; font-size: 0.8rem; color: #aaa; margin-bottom: 4px; }
+        .setting-val { color: white; font-family: monospace; }
+        input[type=range] { width: 100%; height: 4px; background: #333; accent-color: #3b82f6; }
 
+        /* [NEW] Live Log Panel (Overlay) */
+        #panel-logs {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 300px; height: 350px; background: rgba(20, 20, 20, 0.95); border: 1px solid #444;
+            border-radius: 12px; padding: 15px; z-index: 60; display: none;
+            flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+        #log-container { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+        .log-entry { font-size: 0.75rem; padding: 6px; background: #333; border-radius: 4px; display: flex; justify-content: space-between; color: #ccc; }
+        .log-entry.violation { background: rgba(231, 76, 60, 0.2); border-left: 3px solid #e74c3c; color: white; }
+
+        /* List Panel (Original) */
+        #list-panel { position: fixed; left: -400px; top: 0; bottom: 0; width: 300px; background: rgba(44, 62, 80, 0.98); padding: 20px; transition: 0.3s; z-index: 50; overflow-y: auto; box-shadow: 5px 0 15px rgba(0,0,0,0.5); color: #eee; }
+        #list-panel.open { left: 300px; } 
+        #list-panel h3 { color: #e74c3c; border-bottom: 1px solid #555; padding-bottom: 10px; }
+        .student-item { background: #34495e; padding: 15px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #555; display: flex; flex-direction: column; gap: 5px; transition: 0.3s; }
+        .student-item.problematic { background: linear-gradient(135deg, #621010 0%, #3a0000 100%); border: 2px solid #ff0000; box-shadow: 0 0 10px rgba(255, 0, 0, 0.4); animation: shake 0.5s; }
+        .item-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+        .student-info b { font-size: 1.1rem; }
+        .student-info span { font-size: 0.9rem; color: #bbb; }
+        .count-badge { background: #e67e22; color: white; padding: 4px 10px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 0.9rem; min-width: 25px; text-align: center; }
+        .timestamp-list { display: none; margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; font-size: 0.8rem; color: #aaa; max-height: 150px; overflow-y: auto; }
+        .del-btn { background: #c0392b; color: white; border: none; padding: 5px; font-size: 0.8rem; width: 100%; margin-top: 10px; border-radius: 4px; display: none; }
+        
         #input_video { display: none; }
-        #loading-msg { display: none; color: #ef4444; margin-top: 10px; font-weight: bold; text-align: center; }
+        #loading-msg { color: #e74c3c; font-weight: bold; display: none; margin-top: 10px; }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #222; }
+        ::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
     </style>
 </head>
 <body>
 
     <div id="sidebar">
         <div class="title-container">
-            <h2 style="color:#9ca3af; margin:0; letter-spacing:3px;">KOREAN KILLER</h2>
+            <h2>Korean Killer</h2>
             <div id="kk-logo">KK</div>
         </div>
         <input type="text" id="input-name" placeholder="Name">
         <input type="text" id="input-id" placeholder="Student ID">
-        <button id="btn-start" onclick="startSystem()">▶ START SYSTEM</button>
-        <div id="loading-msg">Initializing AI...</div>
-        <button id="btn-stop" onclick="location.reload()" style="display:none; background:#4b5563;">⏹ RESET</button>
-        
-        <div style="margin-top:auto; border-top:1px solid #4b5563; padding-top:10px;">
-            <p style="color:#ef4444; font-size:0.8rem; margin-bottom:5px;">Admin Controls</p>
-            <input type="password" id="admin-pw" placeholder="Password" style="margin-bottom:5px;">
-            <button onclick="authAdmin()" style="background:#3b82f6;">Unlock Admin</button>
+        <button id="btn-start" onclick="startSystem()">▶ Start AI System</button>
+        <div id="loading-msg">Loading AI Models...</div>
+        <button id="btn-stop" onclick="location.reload()">⏹ Stop System</button>
+        <button id="btn-list" onclick="toggleList()">📋 Detection List</button>
+        <div id="prof-controls">
+            <p>👮‍♂️ [Professor Mode]</p>
+            <input type="text" id="add-name" placeholder="Name" style="margin-bottom:5px;">
+            <input type="text" id="add-id" placeholder="ID" style="margin-bottom:5px;">
+            <button onclick="manualAdd()" style="background:#ff9800;">Manual Add</button>
+            <hr style="border-color:#555; margin: 15px 0;">
+            <button onclick="deleteAllData()" class="btn-delete-all">⚠️ DELETE ALL DATA</button>
         </div>
+        <button id="btn-prof" onclick="authProfessor()">🔒 Admin Auth</button>
+    </div>
+
+    <div id="list-panel">
+        <h3>🚨 Detected Students</h3>
+        <ul id="student-list" style="list-style: none; padding: 0;"></ul>
     </div>
 
     <div id="main-content">
-        
-        <div id="control-bar">
-            <button class="ctrl-btn" id="btn-settings" onclick="togglePanel('settings')">⚙️ Settings</button>
-            <button class="ctrl-btn" id="btn-logs" onclick="togglePanel('logs')">📊 Live Log</button>
+        <div id="monitor-controls">
+            <button class="monitor-btn" onclick="togglePanel('settings')">⚙️ Settings</button>
+            <button class="monitor-btn" onclick="togglePanel('logs')">📊 Live Log</button>
         </div>
 
-        <div id="visual-area">
-            <img src="1.jpg" id="monitor-image" class="side-img" alt="Monitor">
+        <div id="visual-wrapper">
+            <img src="1.jpg" id="monitor-image" class="side-img" alt="Surveillance Monitor">
             
-            <div id="camera-wrapper">
-                <canvas id="output_canvas"></canvas>
-                <div id="alert-overlay">🚨 DETECTED!</div>
-            </div>
-            
-            <div id="settings-panel">
-                <h3 style="margin:0; color:white; border-bottom:1px solid #4b5563; padding-bottom:10px;">Detection Settings</h3>
-                
-                <div class="setting-item">
-                    <div class="setting-header"><span>AI Confidence</span><span id="val-conf" class="setting-val">50%</span></div>
-                    <input type="range" min="1" max="99" value="50" oninput="updateSetting('confidence', this.value)">
+            <div id="center-stage">
+                <div id="placeholder" style="text-align:center;">
+                    <h1 style="color:white;">System Standby</h1>
+                    <p style="color:#aaa;">Please enter your Name and ID to start.</p>
                 </div>
                 
-                <div class="setting-item">
-                    <div class="setting-header"><span>Mouth Open (Gap)</span><span id="val-mouth" class="setting-val">1.0%</span></div>
-                    <input type="range" min="1" max="50" value="10" oninput="updateSetting('mouthOpen', this.value)">
+                <div id="status-panel" style="display:none;">
+                    <div id="status-audio" class="status-box">🎤 AI Standby</div>
+                    <div id="status-video" class="status-box">🤐 0%</div>
                 </div>
 
-                <div class="setting-item">
-                    <div class="setting-header"><span>Lip Movement</span><span id="val-lip" class="setting-val">Lv 20</span></div>
-                    <input type="range" min="1" max="100" value="20" oninput="updateSetting('lipMovement', this.value)">
+                <div id="camera-wrapper">
+                    <canvas id="output_canvas"></canvas>
+                    <div id="alert-overlay">🚨 DETECTED!</div>
                 </div>
 
-                <div class="setting-item">
-                    <div class="setting-header"><span>Strictness</span><span id="val-strict" class="setting-val">3 frames</span></div>
-                    <input type="range" min="1" max="10" value="3" oninput="updateSetting('strictness', this.value)">
+                <div id="panel-settings">
+                    <div class="panel-header">
+                        <span>DETECTION SETTINGS</span>
+                        <span style="cursor:pointer" onclick="togglePanel('settings')">✕</span>
+                    </div>
+                    
+                    <div class="setting-row">
+                        <div class="setting-label"><span>AI Confidence</span><span id="txt-conf">50%</span></div>
+                        <input type="range" min="1" max="99" value="50" oninput="updateSettings('confidence', this.value)">
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-label"><span>Mouth Open (Gap)</span><span id="txt-gap">1.0%</span></div>
+                        <input type="range" min="1" max="50" value="10" oninput="updateSettings('mouthOpen', this.value)">
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-label"><span>Lip Movement</span><span id="txt-move">Lv 20</span></div>
+                        <input type="range" min="1" max="100" value="20" oninput="updateSettings('lipMovement', this.value)">
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-label"><span>Strictness</span><span id="txt-strict">3 frames</span></div>
+                        <input type="range" min="1" max="10" value="3" oninput="updateSettings('strictness', this.value)">
+                    </div>
                 </div>
-            </div>
 
-            <div id="log-panel">
-                <h3 style="margin:0; color:white; border-bottom:1px solid #4b5563; padding-bottom:10px;">Live Monitor</h3>
-                <div id="log-list">
-                    <div style="text-align:center; color:#6b7280; margin-top:20px;">Waiting for data...</div>
+                <div id="panel-logs">
+                    <div class="panel-header">
+                        <span>LIVE LOGS</span>
+                        <span style="cursor:pointer" onclick="togglePanel('logs')">✕</span>
+                    </div>
+                    <div id="log-container">
+                        <div style="text-align:center; color:#555; margin-top:20px;">Waiting for data...</div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-
     <video id="input_video" playsinline></video>
 
     <script>
@@ -214,7 +249,6 @@
     </script>
 
     <script>
-        // 1. Firebase Setup
         const firebaseConfig = {
             apiKey: "AIzaSyDaLlrTKsMCpCzVgBW9icTmEPcuO_zoWVY",
             authDomain: "acdt-project.firebaseapp.com",
@@ -227,173 +261,69 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // 2. Global State & Settings (React useRef/useState 대체)
+        // Global State
         let isRunning = false;
         let userName = "", userId = "";
         let classifier = null; 
         
-        // [React 로직 이식] 설정값 객체
+        // [New Settings State]
         const settings = {
-            confidence: 0.50,   // 기본 50%
-            mouthOpen: 0.01,    // 기본 1.0% (좌표차이)
-            lipMovement: 0.002, // 기본 표준편차
-            strictness: 3       // 연속 프레임 수
+            confidence: 0.50,
+            mouthOpen: 0.01,
+            lipMovement: 0.002,
+            strictness: 3
         };
 
-        // [React 로직 이식] 분석용 히스토리
-        const lipHistory = []; // 입 움직임 계산용
-        const violationQueue = []; // 연속 적발 계산용
+        // Logic Variables
+        const lipHistory = [];
+        const violationQueue = [];
         let alertTimeout = null;
+        let currentAudioResult = { label: 'noise', score: 0 };
 
-        // 3. UI Control Functions
-        function togglePanel(panelName) {
-            const settingsPanel = document.getElementById('settings-panel');
-            const logPanel = document.getElementById('log-panel');
-            const btnSettings = document.getElementById('btn-settings');
-            const btnLogs = document.getElementById('btn-logs');
-
-            if (panelName === 'settings') {
-                settingsPanel.classList.toggle('show');
-                btnSettings.classList.toggle('active');
-                // 로그 패널이 켜져있으면 끈다 (겹침 방지)
-                if(logPanel.classList.contains('show')) {
-                    logPanel.classList.remove('show');
-                    btnLogs.classList.remove('active');
-                }
-            } else if (panelName === 'logs') {
-                logPanel.classList.toggle('show');
-                btnLogs.classList.toggle('active');
-                if(settingsPanel.classList.contains('show')) {
-                    settingsPanel.classList.remove('show');
-                    btnSettings.classList.remove('active');
-                }
-            }
-        }
-
-        function updateSetting(key, value) {
-            // UI 업데이트 및 내부 변수 업데이트
-            if (key === 'confidence') {
-                settings.confidence = value / 100;
-                document.getElementById('val-conf').innerText = value + '%';
-            } else if (key === 'mouthOpen') {
-                settings.mouthOpen = value / 1000;
-                document.getElementById('val-mouth').innerText = (value/10).toFixed(1) + '%';
-            } else if (key === 'lipMovement') {
-                settings.lipMovement = value / 10000;
-                document.getElementById('val-lip').innerText = 'Lv ' + value;
-            } else if (key === 'strictness') {
-                settings.strictness = parseInt(value);
-                document.getElementById('val-strict').innerText = value + ' frames';
-            }
-        }
-
-        function addLog(label, score, mouthState, isViolation) {
-            const list = document.getElementById('log-list');
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
+        // -------------------------
+        // UI CONTROL FUNCTIONS
+        // -------------------------
+        function togglePanel(name) {
+            const pSet = document.getElementById('panel-settings');
+            const pLog = document.getElementById('panel-logs');
             
+            if (name === 'settings') {
+                pSet.style.display = pSet.style.display === 'block' ? 'none' : 'block';
+                pLog.style.display = 'none'; // 하나만 띄우기
+            } else {
+                pLog.style.display = pLog.style.display === 'flex' ? 'none' : 'flex';
+                pSet.style.display = 'none';
+            }
+        }
+
+        function updateSettings(key, value) {
+            if(key === 'confidence') { settings.confidence = value/100; document.getElementById('txt-conf').innerText = value + '%'; }
+            if(key === 'mouthOpen') { settings.mouthOpen = value/1000; document.getElementById('txt-gap').innerText = (value/10).toFixed(1) + '%'; }
+            if(key === 'lipMovement') { settings.lipMovement = value/10000; document.getElementById('txt-move').innerText = 'Lv ' + value; }
+            if(key === 'strictness') { settings.strictness = value; document.getElementById('txt-strict').innerText = value + ' frames'; }
+        }
+
+        function addLog(label, score, visual, isViolation) {
+            const container = document.getElementById('log-container');
+            const now = new Date().toLocaleTimeString('en-US', {hour12:false});
             const div = document.createElement('div');
-            div.className = `log-item ${isViolation ? 'violation' : ''}`;
+            div.className = `log-entry ${isViolation ? 'violation' : ''}`;
             div.innerHTML = `
-                <div>
-                    <span class="log-time">[${timeStr}]</span>
-                    <span style="color:#eee; font-weight:bold; margin-left:5px;">${label.toUpperCase()}</span>
-                    <span style="color:#6b7280; font-size:0.7rem;">(${mouthState})</span>
-                </div>
-                <div class="log-badge" style="background:${isViolation ? '#ef4444' : '#10b981'}">
-                    ${Math.round(score*100)}%
-                </div>
+                <span>[${now}] ${label.toUpperCase()}</span>
+                <span>${visual} / ${Math.round(score*100)}%</span>
             `;
-            
-            list.insertBefore(div, list.firstChild);
-            // 로그 20개 유지
-            if (list.children.length > 20) list.removeChild(list.lastChild);
+            container.insertBefore(div, container.firstChild);
+            if(container.children.length > 20) container.removeChild(container.lastChild);
         }
 
-        // [React 로직 이식] 표준편차 계산 함수
+        // -------------------------
+        // LOGIC FUNCTIONS
+        // -------------------------
         function calculateStandardDeviation(arr) {
             if (arr.length === 0) return 0;
             const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
             const variance = arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / arr.length;
             return Math.sqrt(variance);
-        }
-
-        // 4. System Start Logic
-        async function startSystem() {
-            userName = document.getElementById('input-name').value;
-            userId = document.getElementById('input-id').value;
-            if (!userName || !userId) { alert("Please enter Name and Student ID!"); return; }
-
-            const btn = document.getElementById('btn-start');
-            const msg = document.getElementById('loading-msg');
-            btn.disabled = true;
-            btn.style.opacity = "0.5";
-            msg.style.display = 'block';
-
-            try {
-                // 1. Edge Impulse Init
-                msg.innerText = "Step 1: Loading AI Brain...";
-                classifier = new EdgeImpulseClassifier();
-                await classifier.init();
-                
-                // 2. Camera & FaceMesh Init
-                msg.innerText = "Step 2: Connecting Eyes...";
-                await startFaceMesh();
-                
-                // 3. Audio Init
-                msg.innerText = "Step 3: Opening Ears...";
-                await startAudioProcessing();
-
-                // UI 전환
-                msg.style.display = 'none';
-                btn.style.display = 'none';
-                document.getElementById('btn-stop').style.display = 'block';
-                document.getElementById('camera-wrapper').style.display = 'block'; // 줌 카메라 표시
-                
-                // 로그 패널 자동 오픈 (선택사항)
-                togglePanel('logs'); 
-                
-                isRunning = true;
-
-            } catch (err) {
-                console.error(err);
-                alert("Error: " + err.message);
-                location.reload();
-            }
-        }
-
-        // [React 로직 이식] 오디오 처리
-        async function startAudioProcessing() {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const source = audioContext.createMediaStreamSource(stream);
-            
-            // AI 타겟 주파수 (16kHz)
-            const targetRate = 16000; 
-            const processor = audioContext.createScriptProcessor(4096, 1, 1);
-            let audioBuffer = new Float32Array(targetRate * 1); // 1초 버퍼
-            let bufferIdx = 0;
-
-            source.connect(processor);
-            processor.connect(audioContext.destination);
-
-            processor.onaudioprocess = function(e) {
-                if (!isRunning) return;
-                const inputData = e.inputBuffer.getChannelData(0);
-                // 다운샘플링
-                const downsampled = downsampleBuffer(inputData, audioContext.sampleRate, targetRate);
-
-                for (let i = 0; i < downsampled.length; i++) {
-                    if (bufferIdx < audioBuffer.length) {
-                        audioBuffer[bufferIdx] = downsampled[i];
-                        bufferIdx++;
-                    } else {
-                        // 버퍼가 차면 분류 실행
-                        runClassification(audioBuffer);
-                        bufferIdx = 0; // 버퍼 리셋 (간단 구현)
-                    }
-                }
-            };
         }
 
         function downsampleBuffer(buffer, sampleRate, outSampleRate) {
@@ -406,10 +336,7 @@
             while (offsetResult < result.length) {
                 var nextOffsetBuffer = Math.round((offsetResult + 1) * sampleRateRatio);
                 var accum = 0, count = 0;
-                for (var i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
-                    accum += buffer[i];
-                    count++;
-                }
+                for (var i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) { accum += buffer[i]; count++; }
                 result[offsetResult] = accum / count;
                 offsetResult++;
                 offsetBuffer = nextOffsetBuffer;
@@ -417,151 +344,191 @@
             return result;
         }
 
-        // [React 로직 이식] 최종 판단 로직
-        // 전역 변수로 현재 오디오 분석 결과 저장
-        let currentAudioResult = { label: 'noise', score: 0 };
+        // -------------------------
+        // SYSTEM START
+        // -------------------------
+        async function startSystem() {
+            userName = document.getElementById('input-name').value;
+            userId = document.getElementById('input-id').value;
+            if (!userName || !userId) { alert("Please enter Name and Student ID!"); return; }
 
-        async function runClassification(data) {
+            const btn = document.getElementById('btn-start');
+            const msg = document.getElementById('loading-msg');
+            btn.disabled = true; msg.style.display = 'block';
+
             try {
-                if(!classifier) return;
-                let results = classifier.classify(data);
+                // 1. Edge Impulse
+                classifier = new EdgeImpulseClassifier();
+                await classifier.init();
                 
-                // 가장 높은 점수 찾기
-                let topResult = results.results.reduce((prev, curr) => prev.value > curr.value ? prev : curr);
-                currentAudioResult = { label: topResult.label, score: topResult.value };
+                // 2. Audio Processing (New Logic)
+                await startAudioProcessing();
 
-            } catch (ex) { console.log("AI Error:", ex); }
+                // 3. Vision (FaceMesh)
+                await startFaceMesh();
+
+                // UI Transition
+                msg.style.display = 'none';
+                btn.style.display = 'none';
+                document.getElementById('btn-stop').style.display = 'block';
+                document.getElementById('placeholder').style.display = 'none';
+                document.getElementById('camera-wrapper').style.display = 'block';
+                document.getElementById('status-panel').style.display = 'flex';
+                
+                isRunning = true;
+                togglePanel('logs'); // 로그창 자동 띄우기 (선택사항)
+
+            } catch (err) {
+                console.error(err);
+                alert("Error: " + err.message);
+                location.reload();
+            }
         }
 
-        // 비전 처리 루프 (FaceMesh)
+        async function startAudioProcessing() {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(stream);
+            const targetRate = 16000; 
+            const processor = audioContext.createScriptProcessor(4096, 1, 1);
+            let audioBuffer = new Float32Array(targetRate * 1); 
+            let bufferIdx = 0;
+
+            source.connect(processor);
+            processor.connect(audioContext.destination);
+
+            processor.onaudioprocess = function(e) {
+                if (!isRunning) return;
+                const inputData = e.inputBuffer.getChannelData(0);
+                const downsampled = downsampleBuffer(inputData, audioContext.sampleRate, targetRate);
+                for (let i = 0; i < downsampled.length; i++) {
+                    if (bufferIdx < audioBuffer.length) { audioBuffer[bufferIdx] = downsampled[i]; bufferIdx++; }
+                    else {
+                        runClassification(audioBuffer);
+                        bufferIdx = 0;
+                    }
+                }
+            };
+        }
+
+        async function runClassification(data) {
+            if(!classifier) return;
+            let results = classifier.classify(data);
+            let topResult = results.results.reduce((prev, curr) => prev.value > curr.value ? prev : curr);
+            currentAudioResult = { label: topResult.label, score: topResult.value };
+            
+            // Update Old UI (Status Panel)
+            const audioBox = document.getElementById('status-audio');
+            audioBox.innerText = `🎤 ${currentAudioResult.label.toUpperCase()} (${Math.round(currentAudioResult.score*100)}%)`;
+            if(currentAudioResult.label === 'korean' && currentAudioResult.score > settings.confidence) {
+                audioBox.className = "status-box active-red";
+            } else {
+                audioBox.className = "status-box";
+            }
+        }
+
         async function startFaceMesh() {
             const videoElement = document.getElementById('input_video');
             const canvasElement = document.getElementById('output_canvas');
             const ctx = canvasElement.getContext('2d');
             const faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
-            
             faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5 });
             
             faceMesh.onResults((results) => {
                 if (!isRunning) return;
+                canvasElement.width = 500; canvasElement.height = 500;
+                ctx.fillStyle = "black"; ctx.fillRect(0, 0, 500, 500);
 
-                // 캔버스 그리기
-                canvasElement.width = 400; canvasElement.height = 400;
-                ctx.save();
-                ctx.scale(-1, 1);
-                ctx.translate(-400, 0);
-                ctx.drawImage(results.image, 0, 0, 400, 400);
+                let visualState = "Closed";
+                let gapPercent = 0;
 
-                // 얼굴 감지됨
-                let visualState = 'Closed';
-                let isViolation = false;
-
-                if (results.multiFaceLandmarks.length > 0) {
+                if (results.image && results.multiFaceLandmarks.length > 0) {
                     const lm = results.multiFaceLandmarks[0];
-                    // 입술 좌표 (상:13, 하:14)
-                    const upper = lm[13]; 
-                    const lower = lm[14];
+                    const sW = videoElement.videoWidth; const sH = videoElement.videoHeight;
+                    const upper = lm[13]; const lower = lm[14];
                     
-                    // 입 벌림 정도 (Y좌표 차이)
+                    // Logic: Gap & Movement
                     const gap = lower.y - upper.y;
-                    
-                    // [React 로직] 입 움직임 표준편차 계산
                     lipHistory.push(gap);
                     if (lipHistory.length > 5) lipHistory.shift();
                     const movement = calculateStandardDeviation(lipHistory);
-
-                    // 시각화 (초록점)
-                    ctx.fillStyle = "#00FF00";
-                    const uX = upper.x * 400; const uY = upper.y * 400;
-                    const lX = lower.x * 400; const lY = lower.y * 400;
-                    ctx.beginPath(); ctx.arc(uX, uY, 3, 0, 2*Math.PI); ctx.fill();
-                    ctx.beginPath(); ctx.arc(lX, lY, 3, 0, 2*Math.PI); ctx.fill();
-
-                    // [핵심 판정 로직]
-                    if (gap > settings.mouthOpen) {
-                        if (movement > settings.lipMovement) {
-                            visualState = 'Speaking';
-                        } else {
-                            visualState = 'Open';
-                        }
-                    }
-
-                    // 오디오 + 비디오 결합 판정
-                    const isKorean = currentAudioResult.label === 'korean' && currentAudioResult.score > settings.confidence;
-                    const isMouthActive = visualState === 'Speaking';
-
-                    if (isKorean && isMouthActive) {
-                        violationQueue.push(1);
-                    } else {
-                        violationQueue.push(0);
-                    }
-                    if (violationQueue.length > 10) violationQueue.shift();
-
-                    // 연속 프레임 체크 (Strictness)
-                    const violationCount = violationQueue.filter(v => v === 1).length;
                     
-                    if (violationCount >= settings.strictness) {
-                        isViolation = true;
+                    gapPercent = (gap / 0.05) * 100; // 시각화용 퍼센트 (임의 스케일)
+
+                    // Draw Camera
+                    const zoom = 4.0; const cw = sW/zoom; const ch = sH/zoom;
+                    let cx = ((upper.x + lower.x)/2 * sW) - cw/2;
+                    let cy = ((upper.y + lower.y)/2 * sH) - ch/2;
+                    ctx.drawImage(results.image, cx, cy, cw, ch, 0, 0, 500, 500);
+
+                    // Decision
+                    if (gap > settings.mouthOpen) {
+                        visualState = movement > settings.lipMovement ? "Speaking" : "Open";
+                    }
+
+                    // Combined Logic Check
+                    const isKorean = currentAudioResult.label === 'korean' && currentAudioResult.score > settings.confidence;
+                    const isMouthActive = visualState === "Speaking";
+                    
+                    if(isKorean && isMouthActive) violationQueue.push(1);
+                    else violationQueue.push(0);
+                    if(violationQueue.length > 10) violationQueue.shift();
+
+                    if(violationQueue.filter(v => v===1).length >= settings.strictness) {
                         triggerDetection();
+                        addLog(currentAudioResult.label, currentAudioResult.score, visualState, true);
+                    } else if (Math.random() < 0.05) {
+                        addLog(currentAudioResult.label, currentAudioResult.score, visualState, false);
                     }
                 }
-                ctx.restore();
 
-                // 로그 업데이트 (너무 자주 안 하도록, 변경 있을때나 1초마다 하면 좋지만 여기선 매 프레임 업데이트하되 DOM 부하 고려 필요)
-                // 간단하게 위반 시 또는 일정 확률로 로그 찍기
-                if (Math.random() < 0.05 || isViolation) {
-                    addLog(currentAudioResult.label, currentAudioResult.score, visualState, isViolation);
-                }
-
+                // Update Old UI (Video Status)
+                const vStatus = document.getElementById('status-video');
+                vStatus.innerText = `${visualState === 'Speaking' ? '🗣️' : '🤐'} ${gapPercent.toFixed(0)}%`;
+                vStatus.className = visualState === 'Speaking' ? "status-box active-green" : "status-box";
             });
 
             const camera = new Camera(videoElement, {
                 onFrame: async () => { await faceMesh.send({image: videoElement}); },
-                width: 640, height: 480
+                width: 1280, height: 720
             });
             await camera.start();
         }
 
         function triggerDetection() {
-            // 중복 실행 방지 쿨다운 (2초)
-            const now = Date.now();
             if (alertTimeout) return; 
 
             // 1. Overlay
             const overlay = document.getElementById('alert-overlay');
             overlay.style.display = 'block';
             
-            // 2. Image Switch (1.jpg -> 2.jpg)
+            // 2. Image Switch
             const img = document.getElementById('monitor-image');
-            img.src = "2.jpg"; 
-            img.classList.add('alert-mode');
+            img.src = "2.jpg"; img.classList.add('alert-mode');
 
-            // 3. DB Upload
+            // 3. DB
             db.collection("detections").add({ 
                 name: userName, studentId: userId, 
                 reason: `Korean(${Math.round(currentAudioResult.score*100)}%)`, 
                 timestamp: firebase.firestore.FieldValue.serverTimestamp() 
             });
 
-            // 4. Reset Timer
+            // 4. Reset
             alertTimeout = setTimeout(() => {
                 overlay.style.display = 'none';
-                img.src = "1.jpg";
-                img.classList.remove('alert-mode');
+                img.src = "1.jpg"; img.classList.remove('alert-mode');
                 alertTimeout = null;
-                // 큐 초기화 (연속 적발 방지)
                 violationQueue.length = 0;
             }, 3000);
         }
 
-        function authAdmin() {
-            const pw = document.getElementById('admin-pw').value;
-            if(pw === "kyj") {
-                alert("Admin Unlocked: You can now access full logs.");
-            } else {
-                alert("Wrong Password");
-            }
-        }
+        // --- Original Helper Functions ---
+        function toggleList() { document.getElementById('list-panel').classList.toggle('open'); }
+        function authProfessor() { if (prompt("Password:") === "kyj") { document.getElementById('prof-controls').style.display='block'; document.getElementById('btn-prof').style.display='none'; loadList(); } }
+        function manualAdd() { const n=document.getElementById('add-name').value; const i=document.getElementById('add-id').value; if(n&&i) db.collection("detections").add({name:n, studentId:i, timestamp:firebase.firestore.FieldValue.serverTimestamp()}); }
+        async function deleteAllData() { if(confirm("Delete ALL?")) { const snap = await db.collection("detections").get(); const batch = db.batch(); snap.docs.forEach(d=>batch.delete(d.ref)); await batch.commit(); } }
+        function loadList() { db.collection("detections").orderBy("timestamp", "desc").onSnapshot(s => { const list = document.getElementById('student-list'); list.innerHTML = ""; const st = {}; s.forEach(d => { const dt=d.data(); if(!st[dt.studentId]) st[dt.studentId]={name:dt.name, id:dt.studentId, cnt:0}; st[dt.studentId].cnt++; }); Object.values(st).forEach(s => { const li=document.createElement('li'); li.className='student-item'; li.innerHTML=`<b>${s.name}</b> (${s.id}) <span class="count-badge">${s.cnt}</span>`; list.appendChild(li); }); }); }
+        loadList(); 
     </script>
 </body>
 </html>
