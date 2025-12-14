@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Korean Killer - Final Hybrid</title>
+    <title>Korean Killer</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -13,16 +13,18 @@
     <script src="edge-impulse-standalone.js"></script>
 
     <style>
-        /* [기존 디자인 유지] */
+        /* [기존 스타일 유지] */
         body { margin: 0; padding: 0; display: flex; height: 100vh; font-family: 'Segoe UI', sans-serif; overflow: hidden; background: #1a1a1a; color: #eee; }
         
         #sidebar { width: 260px; background-color: #2c3e50; padding: 20px; display: flex; flex-direction: column; gap: 15px; z-index: 100; box-shadow: 2px 0 10px rgba(0,0,0,0.5); flex-shrink: 0; }
         .title-container { text-align: center; margin-bottom: 10px; border-bottom: 1px solid #444; padding-bottom: 20px; }
         #sidebar h2 { margin: 0; color: #bdc3c7; font-size: 1rem; text-transform: uppercase; letter-spacing: 3px; font-weight: normal; }
         #kk-logo { font-size: 6rem; font-weight: 900; color: #e74c3c; margin: 0; line-height: 1; letter-spacing: -5px; text-shadow: 0 0 20px rgba(231, 76, 60, 0.6); font-family: 'Arial Black', sans-serif; }
+        
         input, button { padding: 10px; border-radius: 8px; border: 1px solid #555; width: 100%; box-sizing: border-box; background-color: #34495e; color: #eee; }
         button { cursor: pointer; font-weight: bold; transition: 0.2s; background: #e74c3c; color: white; border: none; }
         button:hover { opacity: 0.9; transform: scale(1.02); background-color: #c0392b; }
+        
         #btn-stop { background-color: #c0392b; display: none; }
         #btn-list { background-color: #3498db; }
         #btn-prof { background-color: #95a5a6; margin-top: auto; }
@@ -30,65 +32,84 @@
         #prof-controls p { color: #e74c3c; font-size: 0.9rem; margin-top: 0; }
         .btn-delete-all { background-color: #e74c3c !important; border: 2px solid white !important; margin-top: 10px; }
 
-        /* Main Content */
-        #main-content { flex-grow: 1; position: relative; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; background-image: radial-gradient(circle at 50% 50%, rgba(231, 76, 60, 0.15) 0%, transparent 60%), linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%), repeating-linear-gradient(45deg, #1a1a1a 0, #1a1a1a 10px, #222 10px, #222 20px); }
+        /* Main Content Layout */
+        #main-content { 
+            flex-grow: 1; position: relative; background: #000; display: flex; 
+            justify-content: center; align-items: center; gap: 60px; 
+            background-image: radial-gradient(circle at 50% 50%, rgba(231, 76, 60, 0.15) 0%, transparent 60%),
+                              linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%),
+                              repeating-linear-gradient(45deg, #1a1a1a 0, #1a1a1a 10px, #222 10px, #222 20px);
+        }
 
-        /* [NEW] 버튼 컨테이너 (이미지 바로 위) */
+        /* [NEW] 왼쪽 컬럼 (버튼 + 이미지) */
+        #left-column {
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+        }
+
+        /* [NEW] 모니터 컨트롤 버튼 (이미지 바로 위) */
         #monitor-controls {
-            display: flex; gap: 10px; margin-bottom: 15px; z-index: 50;
+            display: flex; gap: 10px; width: 100%; justify-content: center;
         }
-        .monitor-btn {
-            background: rgba(0,0,0,0.7); border: 1px solid #555; color: #bbb; 
-            padding: 8px 20px; border-radius: 20px; font-size: 0.9rem; cursor: pointer; 
-            transition: 0.2s; display: flex; align-items: center; gap: 5px;
+        .ctrl-btn {
+            background: #2c3e50; border: 1px solid #555; color: #ddd; padding: 8px 15px; 
+            border-radius: 20px; font-size: 0.85rem; cursor: pointer; transition: 0.2s;
         }
-        .monitor-btn:hover, .monitor-btn.active { background: #3b82f6; color: white; border-color: #60a5fa; box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+        .ctrl-btn:hover, .ctrl-btn.active { background: #3b82f6; border-color: #60a5fa; color: white; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
 
-        /* 이미지 및 카메라 영역 컨테이너 */
-        #visual-wrapper { position: relative; display: flex; justify-content: center; align-items: center; }
-
-        .side-img { height: 60vh; max-height: 600px; width: auto; object-fit: contain; border: 2px solid #444; box-shadow: 0 0 30px rgba(0,0,0,0.8); opacity: 0.9; transition: 0.3s; }
+        .side-img { 
+            height: 60vh; max-height: 600px; width: auto; object-fit: contain; 
+            border: 2px solid #444; box-shadow: 0 0 30px rgba(0,0,0,0.8); 
+            opacity: 0.9; transition: 0.3s; 
+        }
         .side-img.alert-mode { border-color: #e74c3c; box-shadow: 0 0 50px rgba(231, 76, 60, 0.8); transform: scale(1.05); }
 
-        #center-stage { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; height: 500px; display: flex; justify-content: center; align-items: center; }
+        /* Center Stage (Camera) */
+        #center-stage { position: relative; display: flex; justify-content: center; align-items: center; width: 500px; height: 500px; }
         
-        #camera-wrapper { display: none; width: 500px; height: 500px; border-radius: 50%; overflow: hidden; border: 5px solid #e74c3c; position: relative; background: black; box-shadow: 0 0 30px rgba(231, 76, 60, 0.6), inset 0 0 50px rgba(231, 76, 60, 0.4); }
-        #camera-wrapper::before { content: ''; position: absolute; top: 50%; left: 50%; width: 120%; height: 120%; transform: translate(-50%, -50%); background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><circle cx="250" cy="250" r="240" fill="none" stroke="rgba(231, 76, 60, 0.5)" stroke-width="2" stroke-dasharray="10 5"/><circle cx="250" cy="250" r="180" fill="none" stroke="rgba(231, 76, 60, 0.3)" stroke-width="1"/><path d="M250 50 L250 450 M50 250 L450 250" stroke="rgba(231, 76, 60, 0.4)" stroke-width="1"/><circle cx="250" cy="250" r="50" fill="rgba(231, 76, 60, 0.2)"/></svg>'); background-repeat: no-repeat; background-position: center; pointer-events: none; z-index: 1; }
+        #camera-wrapper { 
+            display: none; width: 500px; height: 500px; border-radius: 50%; overflow: hidden; 
+            border: 5px solid #e74c3c; position: relative; background: black; 
+            box-shadow: 0 0 30px rgba(231, 76, 60, 0.6), inset 0 0 50px rgba(231, 76, 60, 0.4); 
+        }
+        #camera-wrapper::before {
+            content: ''; position: absolute; top: 50%; left: 50%; width: 120%; height: 120%; transform: translate(-50%, -50%);
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><circle cx="250" cy="250" r="240" fill="none" stroke="rgba(231, 76, 60, 0.5)" stroke-width="2" stroke-dasharray="10 5"/><circle cx="250" cy="250" r="180" fill="none" stroke="rgba(231, 76, 60, 0.3)" stroke-width="1"/><path d="M250 50 L250 450 M50 250 L450 250" stroke="rgba(231, 76, 60, 0.4)" stroke-width="1"/><circle cx="250" cy="250" r="50" fill="rgba(231, 76, 60, 0.2)"/></svg>');
+            background-repeat: no-repeat; background-position: center; pointer-events: none; z-index: 1;
+        }
         canvas { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); position: relative; z-index: 0; }
         
-        /* Status Panel (기존 디자인 유지, 로직만 연결) */
+        /* Status Panel */
         #status-panel { position: absolute; top: -60px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 10; width: 100%; justify-content: center; }
         .status-box { background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 30px; color: #aaa; font-weight: bold; border: 1px solid #555; display: flex; align-items: center; gap: 10px; transition: 0.3s; white-space: nowrap; }
         .active-red { color: white !important; background: rgba(255, 0, 0, 0.9) !important; border-color: red !important; box-shadow: 0 0 20px red; }
         .active-green { color: white !important; background: rgba(0, 200, 0, 0.9) !important; border-color: lime !important; box-shadow: 0 0 15px lime; }
-        
-        #alert-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 0, 0, 0.95); color: white; padding: 30px 60px; border-radius: 50px; font-size: 3rem; font-weight: bold; display: none; z-index: 200; box-shadow: 0 0 100px red; animation: pulse 0.3s infinite alternate; text-align: center; white-space: nowrap; }
-        @keyframes pulse { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(1.1); } }
 
         /* [NEW] Settings Panel (Overlay) */
         #panel-settings {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 280px; background: rgba(20, 20, 20, 0.95); border: 1px solid #444;
+            width: 300px; background: rgba(20, 20, 20, 0.95); border: 1px solid #444;
             border-radius: 12px; padding: 20px; z-index: 60; display: none;
             box-shadow: 0 10px 40px rgba(0,0,0,0.8);
         }
-        .panel-header { display: flex; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid #444; padding-bottom: 10px; color: #3b82f6; font-weight: bold; }
-        .setting-row { margin-bottom: 12px; }
-        .setting-label { display: flex; justify-content: space-between; font-size: 0.8rem; color: #aaa; margin-bottom: 4px; }
-        .setting-val { color: white; font-family: monospace; }
+        .setting-row { margin-bottom: 15px; }
+        .setting-label { display: flex; justify-content: space-between; font-size: 0.85rem; color: #aaa; margin-bottom: 5px; }
+        .setting-val { color: #60a5fa; font-family: monospace; }
         input[type=range] { width: 100%; height: 4px; background: #333; accent-color: #3b82f6; }
 
-        /* [NEW] Live Log Panel (Overlay) */
+        /* [NEW] Logs Panel (Overlay) */
         #panel-logs {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 300px; height: 350px; background: rgba(20, 20, 20, 0.95); border: 1px solid #444;
+            width: 320px; height: 400px; background: rgba(20, 20, 20, 0.95); border: 1px solid #444;
             border-radius: 12px; padding: 15px; z-index: 60; display: none;
             flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
         }
         #log-container { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
-        .log-entry { font-size: 0.75rem; padding: 6px; background: #333; border-radius: 4px; display: flex; justify-content: space-between; color: #ccc; }
-        .log-entry.violation { background: rgba(231, 76, 60, 0.2); border-left: 3px solid #e74c3c; color: white; }
+        .log-entry { font-size: 0.75rem; padding: 8px; background: #333; border-radius: 4px; display: flex; justify-content: space-between; color: #ccc; border-left: 3px solid #555; }
+        .log-entry.violation { background: rgba(220, 38, 38, 0.2); border-left-color: #dc2626; color: white; }
 
+        #alert-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 0, 0, 0.95); color: white; padding: 30px 60px; border-radius: 50px; font-size: 3rem; font-weight: bold; display: none; z-index: 200; box-shadow: 0 0 100px red; animation: pulse 0.3s infinite alternate; text-align: center; white-space: nowrap; }
+        @keyframes pulse { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(1.1); } }
+        
         /* List Panel (Original) */
         #list-panel { position: fixed; left: -400px; top: 0; bottom: 0; width: 300px; background: rgba(44, 62, 80, 0.98); padding: 20px; transition: 0.3s; z-index: 50; overflow-y: auto; box-shadow: 5px 0 15px rgba(0,0,0,0.5); color: #eee; }
         #list-panel.open { left: 300px; } 
@@ -104,9 +125,7 @@
         
         #input_video { display: none; }
         #loading-msg { color: #e74c3c; font-weight: bold; display: none; margin-top: 10px; }
-        
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #222; }
         ::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
     </style>
@@ -120,7 +139,7 @@
         </div>
         <input type="text" id="input-name" placeholder="Name">
         <input type="text" id="input-id" placeholder="Student ID">
-        <button id="btn-start" onclick="startSystem()">▶ Start AI System</button>
+        <button id="btn-start" onclick="startSystem()">▶ Start Monitoring</button>
         <div id="loading-msg">Loading AI Models...</div>
         <button id="btn-stop" onclick="location.reload()">⏹ Stop System</button>
         <button id="btn-list" onclick="toggleList()">📋 Detection List</button>
@@ -141,66 +160,64 @@
     </div>
 
     <div id="main-content">
-        <div id="monitor-controls">
-            <button class="monitor-btn" onclick="togglePanel('settings')">⚙️ Settings</button>
-            <button class="monitor-btn" onclick="togglePanel('logs')">📊 Live Log</button>
+        <div id="left-column">
+            <div id="monitor-controls">
+                <button class="ctrl-btn" onclick="togglePanel('settings')">⚙️ Settings</button>
+                <button class="ctrl-btn" onclick="togglePanel('logs')">📊 Live Log</button>
+            </div>
+            
+            <img src="1.jpg" id="monitor-image" class="side-img" alt="Surveillance Monitor">
         </div>
 
-        <div id="visual-wrapper">
-            <img src="1.jpg" id="monitor-image" class="side-img" alt="Surveillance Monitor">
-            
-            <div id="center-stage">
-                <div id="placeholder" style="text-align:center;">
-                    <h1 style="color:white;">System Standby</h1>
-                    <p style="color:#aaa;">Please enter your Name and ID to start.</p>
-                </div>
-                
-                <div id="status-panel" style="display:none;">
-                    <div id="status-audio" class="status-box">🎤 AI Standby</div>
-                    <div id="status-video" class="status-box">🤐 0%</div>
-                </div>
+        <div id="center-stage">
+            <div id="placeholder" style="text-align:center;">
+                <h1 style="color:white;">System Standby</h1>
+                <p style="color:#aaa;">Please enter your Name and ID to start.</p>
+            </div>
 
-                <div id="camera-wrapper">
-                    <canvas id="output_canvas"></canvas>
-                    <div id="alert-overlay">🚨 DETECTED!</div>
-                </div>
+            <div id="status-panel" style="display:none;">
+                <div id="status-audio" class="status-box">🎤 AI Standby</div>
+                <div id="status-video" class="status-box">🤐 0%</div>
+            </div>
 
-                <div id="panel-settings">
-                    <div class="panel-header">
-                        <span>DETECTION SETTINGS</span>
-                        <span style="cursor:pointer" onclick="togglePanel('settings')">✕</span>
-                    </div>
-                    
-                    <div class="setting-row">
-                        <div class="setting-label"><span>AI Confidence</span><span id="txt-conf">50%</span></div>
-                        <input type="range" min="1" max="99" value="50" oninput="updateSettings('confidence', this.value)">
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-label"><span>Mouth Open (Gap)</span><span id="txt-gap">1.0%</span></div>
-                        <input type="range" min="1" max="50" value="10" oninput="updateSettings('mouthOpen', this.value)">
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-label"><span>Lip Movement</span><span id="txt-move">Lv 20</span></div>
-                        <input type="range" min="1" max="100" value="20" oninput="updateSettings('lipMovement', this.value)">
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-label"><span>Strictness</span><span id="txt-strict">3 frames</span></div>
-                        <input type="range" min="1" max="10" value="3" oninput="updateSettings('strictness', this.value)">
-                    </div>
-                </div>
+            <div id="camera-wrapper">
+                <canvas id="output_canvas"></canvas>
+                <div id="alert-overlay">🚨 DETECTED!</div>
+            </div>
 
-                <div id="panel-logs">
-                    <div class="panel-header">
-                        <span>LIVE LOGS</span>
-                        <span style="cursor:pointer" onclick="togglePanel('logs')">✕</span>
-                    </div>
-                    <div id="log-container">
-                        <div style="text-align:center; color:#555; margin-top:20px;">Waiting for data...</div>
-                    </div>
+            <div id="panel-settings">
+                <div style="display:flex; justify-content:space-between; margin-bottom:15px; color:#3b82f6; font-weight:bold;">
+                    <span>SETTINGS</span><span style="cursor:pointer" onclick="togglePanel('settings')">✕</span>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label"><span>AI Confidence</span><span id="txt-conf">50%</span></div>
+                    <input type="range" min="1" max="99" value="50" oninput="updateSettings('confidence', this.value)">
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label"><span>Mouth Open</span><span id="txt-gap">1.0%</span></div>
+                    <input type="range" min="1" max="50" value="10" oninput="updateSettings('mouthOpen', this.value)">
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label"><span>Lip Movement</span><span id="txt-move">Lv 20</span></div>
+                    <input type="range" min="1" max="100" value="20" oninput="updateSettings('lipMovement', this.value)">
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label"><span>Strictness</span><span id="txt-strict">3 frames</span></div>
+                    <input type="range" min="1" max="10" value="3" oninput="updateSettings('strictness', this.value)">
+                </div>
+            </div>
+
+            <div id="panel-logs">
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px; color:#3b82f6; font-weight:bold;">
+                    <span>LIVE LOGS</span><span style="cursor:pointer" onclick="togglePanel('logs')">✕</span>
+                </div>
+                <div id="log-container">
+                    <div style="text-align:center; color:#555; margin-top:20px;">Waiting for data...</div>
                 </div>
             </div>
         </div>
     </div>
+
     <video id="input_video" playsinline></video>
 
     <script>
@@ -249,6 +266,7 @@
     </script>
 
     <script>
+        // 1. Firebase (Original)
         const firebaseConfig = {
             apiKey: "AIzaSyDaLlrTKsMCpCzVgBW9icTmEPcuO_zoWVY",
             authDomain: "acdt-project.firebaseapp.com",
@@ -261,12 +279,11 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // Global State
+        // 2. State & Settings (React Logic)
         let isRunning = false;
         let userName = "", userId = "";
-        let classifier = null; 
+        let classifier = null;
         
-        // [New Settings State]
         const settings = {
             confidence: 0.50,
             mouthOpen: 0.01,
@@ -274,51 +291,42 @@
             strictness: 3
         };
 
-        // Logic Variables
         const lipHistory = [];
         const violationQueue = [];
         let alertTimeout = null;
         let currentAudioResult = { label: 'noise', score: 0 };
 
-        // -------------------------
-        // UI CONTROL FUNCTIONS
-        // -------------------------
+        // 3. UI Controls
         function togglePanel(name) {
-            const pSet = document.getElementById('panel-settings');
-            const pLog = document.getElementById('panel-logs');
-            
+            const ps = document.getElementById('panel-settings');
+            const pl = document.getElementById('panel-logs');
             if (name === 'settings') {
-                pSet.style.display = pSet.style.display === 'block' ? 'none' : 'block';
-                pLog.style.display = 'none'; // 하나만 띄우기
+                ps.style.display = ps.style.display === 'block' ? 'none' : 'block';
+                pl.style.display = 'none';
             } else {
-                pLog.style.display = pLog.style.display === 'flex' ? 'none' : 'flex';
-                pSet.style.display = 'none';
+                pl.style.display = pl.style.display === 'flex' ? 'none' : 'flex';
+                ps.style.display = 'none';
             }
         }
 
         function updateSettings(key, value) {
-            if(key === 'confidence') { settings.confidence = value/100; document.getElementById('txt-conf').innerText = value + '%'; }
-            if(key === 'mouthOpen') { settings.mouthOpen = value/1000; document.getElementById('txt-gap').innerText = (value/10).toFixed(1) + '%'; }
-            if(key === 'lipMovement') { settings.lipMovement = value/10000; document.getElementById('txt-move').innerText = 'Lv ' + value; }
-            if(key === 'strictness') { settings.strictness = value; document.getElementById('txt-strict').innerText = value + ' frames'; }
+            if(key==='confidence'){ settings.confidence=value/100; document.getElementById('txt-conf').innerText=value+'%'; }
+            if(key==='mouthOpen'){ settings.mouthOpen=value/1000; document.getElementById('txt-gap').innerText=(value/10).toFixed(1)+'%'; }
+            if(key==='lipMovement'){ settings.lipMovement=value/10000; document.getElementById('txt-move').innerText='Lv '+value; }
+            if(key==='strictness'){ settings.strictness=value; document.getElementById('txt-strict').innerText=value+' frames'; }
         }
 
         function addLog(label, score, visual, isViolation) {
             const container = document.getElementById('log-container');
-            const now = new Date().toLocaleTimeString('en-US', {hour12:false});
+            const now = new Date().toLocaleTimeString('en-US',{hour12:false});
             const div = document.createElement('div');
             div.className = `log-entry ${isViolation ? 'violation' : ''}`;
-            div.innerHTML = `
-                <span>[${now}] ${label.toUpperCase()}</span>
-                <span>${visual} / ${Math.round(score*100)}%</span>
-            `;
+            div.innerHTML = `<span>[${now}] ${label.toUpperCase()}</span><span>${visual} / ${Math.round(score*100)}%</span>`;
             container.insertBefore(div, container.firstChild);
-            if(container.children.length > 20) container.removeChild(container.lastChild);
+            if(container.children.length>20) container.removeChild(container.lastChild);
         }
 
-        // -------------------------
-        // LOGIC FUNCTIONS
-        // -------------------------
+        // 4. GitHub Logic: Math Helpers
         function calculateStandardDeviation(arr) {
             if (arr.length === 0) return 0;
             const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
@@ -331,22 +339,17 @@
             var sampleRateRatio = sampleRate / outSampleRate;
             var newLength = Math.round(buffer.length / sampleRateRatio);
             var result = new Float32Array(newLength);
-            var offsetResult = 0;
-            var offsetBuffer = 0;
+            var offsetResult = 0; var offsetBuffer = 0;
             while (offsetResult < result.length) {
                 var nextOffsetBuffer = Math.round((offsetResult + 1) * sampleRateRatio);
                 var accum = 0, count = 0;
                 for (var i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) { accum += buffer[i]; count++; }
-                result[offsetResult] = accum / count;
-                offsetResult++;
-                offsetBuffer = nextOffsetBuffer;
+                result[offsetResult] = accum / count; offsetResult++; offsetBuffer = nextOffsetBuffer;
             }
             return result;
         }
 
-        // -------------------------
-        // SYSTEM START
-        // -------------------------
+        // 5. System Start
         async function startSystem() {
             userName = document.getElementById('input-name').value;
             userId = document.getElementById('input-id').value;
@@ -357,17 +360,17 @@
             btn.disabled = true; msg.style.display = 'block';
 
             try {
-                // 1. Edge Impulse
+                // Init Edge Impulse
                 classifier = new EdgeImpulseClassifier();
                 await classifier.init();
                 
-                // 2. Audio Processing (New Logic)
+                // Init Audio
                 await startAudioProcessing();
 
-                // 3. Vision (FaceMesh)
+                // Init FaceMesh
                 await startFaceMesh();
 
-                // UI Transition
+                // UI Ready
                 msg.style.display = 'none';
                 btn.style.display = 'none';
                 document.getElementById('btn-stop').style.display = 'block';
@@ -376,7 +379,8 @@
                 document.getElementById('status-panel').style.display = 'flex';
                 
                 isRunning = true;
-                togglePanel('logs'); // 로그창 자동 띄우기 (선택사항)
+                // Auto open logs
+                togglePanel('logs');
 
             } catch (err) {
                 console.error(err);
@@ -414,17 +418,15 @@
         async function runClassification(data) {
             if(!classifier) return;
             let results = classifier.classify(data);
-            let topResult = results.results.reduce((prev, curr) => prev.value > curr.value ? prev : curr);
-            currentAudioResult = { label: topResult.label, score: topResult.value };
-            
-            // Update Old UI (Status Panel)
+            // Get top result
+            let top = results.results.reduce((p, c) => p.value > c.value ? p : c);
+            currentAudioResult = { label: top.label, score: top.value };
+
+            // Update Audio Status UI
             const audioBox = document.getElementById('status-audio');
-            audioBox.innerText = `🎤 ${currentAudioResult.label.toUpperCase()} (${Math.round(currentAudioResult.score*100)}%)`;
-            if(currentAudioResult.label === 'korean' && currentAudioResult.score > settings.confidence) {
-                audioBox.className = "status-box active-red";
-            } else {
-                audioBox.className = "status-box";
-            }
+            audioBox.innerText = `🎤 ${top.label.toUpperCase()} (${Math.round(top.value*100)}%)`;
+            if(top.label === 'korean' && top.value > settings.confidence) audioBox.className = "status-box active-red";
+            else audioBox.className = "status-box";
         }
 
         async function startFaceMesh() {
@@ -440,22 +442,19 @@
                 ctx.fillStyle = "black"; ctx.fillRect(0, 0, 500, 500);
 
                 let visualState = "Closed";
-                let gapPercent = 0;
-
+                
                 if (results.image && results.multiFaceLandmarks.length > 0) {
                     const lm = results.multiFaceLandmarks[0];
-                    const sW = videoElement.videoWidth; const sH = videoElement.videoHeight;
                     const upper = lm[13]; const lower = lm[14];
                     
-                    // Logic: Gap & Movement
+                    // [GitHub Logic] Gap & StdDev
                     const gap = lower.y - upper.y;
                     lipHistory.push(gap);
                     if (lipHistory.length > 5) lipHistory.shift();
                     const movement = calculateStandardDeviation(lipHistory);
-                    
-                    gapPercent = (gap / 0.05) * 100; // 시각화용 퍼센트 (임의 스케일)
 
                     // Draw Camera
+                    const sW = videoElement.videoWidth; const sH = videoElement.videoHeight;
                     const zoom = 4.0; const cw = sW/zoom; const ch = sH/zoom;
                     let cx = ((upper.x + lower.x)/2 * sW) - cw/2;
                     let cy = ((upper.y + lower.y)/2 * sH) - ch/2;
@@ -466,7 +465,7 @@
                         visualState = movement > settings.lipMovement ? "Speaking" : "Open";
                     }
 
-                    // Combined Logic Check
+                    // Combined Check
                     const isKorean = currentAudioResult.label === 'korean' && currentAudioResult.score > settings.confidence;
                     const isMouthActive = visualState === "Speaking";
                     
@@ -482,9 +481,9 @@
                     }
                 }
 
-                // Update Old UI (Video Status)
+                // Update Video Status UI
                 const vStatus = document.getElementById('status-video');
-                vStatus.innerText = `${visualState === 'Speaking' ? '🗣️' : '🤐'} ${gapPercent.toFixed(0)}%`;
+                vStatus.innerText = `${visualState === 'Speaking' ? '🗣️' : '🤐'} ${visualState}`;
                 vStatus.className = visualState === 'Speaking' ? "status-box active-green" : "status-box";
             });
 
@@ -497,23 +496,18 @@
 
         function triggerDetection() {
             if (alertTimeout) return; 
-
-            // 1. Overlay
             const overlay = document.getElementById('alert-overlay');
             overlay.style.display = 'block';
             
-            // 2. Image Switch
             const img = document.getElementById('monitor-image');
             img.src = "2.jpg"; img.classList.add('alert-mode');
 
-            // 3. DB
             db.collection("detections").add({ 
                 name: userName, studentId: userId, 
                 reason: `Korean(${Math.round(currentAudioResult.score*100)}%)`, 
                 timestamp: firebase.firestore.FieldValue.serverTimestamp() 
             });
 
-            // 4. Reset
             alertTimeout = setTimeout(() => {
                 overlay.style.display = 'none';
                 img.src = "1.jpg"; img.classList.remove('alert-mode');
@@ -522,7 +516,7 @@
             }, 3000);
         }
 
-        // --- Original Helper Functions ---
+        // Original Helpers
         function toggleList() { document.getElementById('list-panel').classList.toggle('open'); }
         function authProfessor() { if (prompt("Password:") === "kyj") { document.getElementById('prof-controls').style.display='block'; document.getElementById('btn-prof').style.display='none'; loadList(); } }
         function manualAdd() { const n=document.getElementById('add-name').value; const i=document.getElementById('add-id').value; if(n&&i) db.collection("detections").add({name:n, studentId:i, timestamp:firebase.firestore.FieldValue.serverTimestamp()}); }
