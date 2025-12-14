@@ -2,12 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Korean Killer (AI Powered + Live Monitor)</title>
+    <title>KK - Original Monitor Ver</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+
     <script src="edge-impulse-standalone.js"></script>
 
     <style>
@@ -26,79 +28,67 @@
         #prof-controls { border-top: 1px solid #7f8c8d; padding-top: 15px; display: none; }
         #prof-controls p { color: #e74c3c; font-size: 0.9rem; margin-top: 0; }
         .btn-delete-all { background-color: #e74c3c !important; border: 2px solid white !important; margin-top: 10px; }
+
         #main-content { flex-grow: 1; position: relative; background: #000; display: flex; justify-content: center; align-items: center; gap: 60px; background-image: radial-gradient(circle at 50% 50%, rgba(231, 76, 60, 0.15) 0%, transparent 60%), linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%), repeating-linear-gradient(45deg, #1a1a1a 0, #1a1a1a 10px, #222 10px, #222 20px); }
         .side-img { height: 60%; max-height: 600px; width: auto; object-fit: contain; border: 2px solid #444; box-shadow: 0 0 30px rgba(0,0,0,0.8); opacity: 0.9; transition: 0.3s; }
         .side-img.alert-mode { border-color: #e74c3c; box-shadow: 0 0 50px rgba(231, 76, 60, 0.8); transform: scale(1.05); }
         
-        /* 중앙 무대 (부모 컨테이너) */
         #center-stage { position: relative; display: flex; justify-content: center; align-items: center; width: 500px; height: 500px; }
-
-        /* 카메라 래퍼 (뒤에 깔리는 요소) */
+        
         #camera-wrapper { display: none; width: 500px; height: 500px; border-radius: 50%; overflow: hidden; border: 5px solid #e74c3c; position: relative; background: black; box-shadow: 0 0 30px rgba(231, 76, 60, 0.6), inset 0 0 50px rgba(231, 76, 60, 0.4); }
         #camera-wrapper::before { content: ''; position: absolute; top: 50%; left: 50%; width: 120%; height: 120%; transform: translate(-50%, -50%); background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><circle cx="250" cy="250" r="240" fill="none" stroke="rgba(231, 76, 60, 0.5)" stroke-width="2" stroke-dasharray="10 5"/><circle cx="250" cy="250" r="180" fill="none" stroke="rgba(231, 76, 60, 0.3)" stroke-width="1"/><path d="M250 50 L250 450 M50 250 L450 250" stroke="rgba(231, 76, 60, 0.4)" stroke-width="1"/><circle cx="250" cy="250" r="50" fill="rgba(231, 76, 60, 0.2)"/></svg>'); background-repeat: no-repeat; background-position: center; pointer-events: none; z-index: 1; }
         canvas { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); position: relative; z-index: 0; }
         
-        /* [NEW] Live Monitor Overlay 스타일 */
-        #live-monitor-overlay {
-            position: absolute; /* 겹치기 핵심 */
-            top: 50%;
+        /* [NEW] Original Monitor Style (Overlay) */
+        #inference-panel {
+            position: absolute;
+            bottom: 40px; /* 카메라 하단 배치 */
             left: 50%;
-            transform: translate(-50%, -50%); /* 정중앙 정렬 */
-            width: 460px; /* 카메라보다 약간 작게 */
-            height: 280px;
-            background: rgba(16, 16, 16, 0.85); /* 반투명 어두운 배경 */
-            border: 2px solid #e74c3c; /* 붉은 테두리 */
-            border-radius: 12px;
-            box-shadow: 0 0 25px rgba(231, 76, 60, 0.3);
-            z-index: 50; /* 카메라 위에 오도록 높은 우선순위 */
-            display: none; /* 시작 전엔 숨김 */
-            flex-direction: column;
-            overflow: hidden;
-            backdrop-filter: blur(5px); /* 배경 흐림 효과 */
-        }
-        .monitor-header {
-            background: #e74c3c;
-            color: black;
-            font-weight: bold;
-            padding: 5px 10px;
-            font-size: 0.9rem;
-            letter-spacing: 1px;
-        }
-        .monitor-content {
-            flex-grow: 1;
+            transform: translateX(-50%);
+            width: 320px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #555;
+            border-radius: 8px;
             padding: 10px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #aaa;
-            font-family: 'Courier New', monospace;
-            font-size: 0.8rem;
+            z-index: 20;
+            display: none; /* 시작 전 숨김 */
+            flex-direction: column;
+            gap: 8px;
+            font-family: monospace;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
         }
-        /* 실제 그래프가 들어갈 자리 (예시용 스타일) */
-        #dsp-placeholder {
-            width: 100%;
-            height: 100%;
-            background: repeating-linear-gradient(
-                45deg,
-                #222,
-                #222 10px,
-                #333 10px,
-                #333 20px
-            );
-            border: 1px dashed #555;
+        .inference-row {
             display: flex;
-            justify-content: center;
             align-items: center;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #ddd;
+        }
+        .inference-label { width: 80px; text-align: right; margin-right: 10px; font-weight: bold; }
+        .inference-bar-bg {
+            flex-grow: 1;
+            height: 10px;
+            background: #333;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-right: 10px;
+        }
+        .inference-bar-fill {
+            height: 100%;
+            background: #e74c3c;
+            width: 0%;
+            transition: width 0.1s;
+        }
+        .inference-score { width: 40px; text-align: right; }
+        #inference-time {
+            font-size: 0.7rem; color: #888; text-align: center; margin-top: 5px; border-top: 1px solid #333; padding-top: 5px;
         }
 
-        #input_video { display: none; }
-        #status-panel { position: absolute; top: -60px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 10; width: 100%; justify-content: center; }
-        .status-box { background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 30px; color: #aaa; font-weight: bold; border: 1px solid #555; display: flex; align-items: center; gap: 10px; transition: 0.3s; white-space: nowrap; }
-        .active-red { color: white !important; background: rgba(255, 0, 0, 0.9) !important; border-color: red !important; box-shadow: 0 0 20px red; }
-        .active-green { color: white !important; background: rgba(0, 200, 0, 0.9) !important; border-color: lime !important; box-shadow: 0 0 15px lime; }
         #alert-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 0, 0, 0.95); color: white; padding: 30px 60px; border-radius: 50px; font-size: 3rem; font-weight: bold; display: none; z-index: 200; box-shadow: 0 0 100px red; animation: pulse 0.3s infinite alternate; text-align: center; white-space: nowrap; }
         @keyframes pulse { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(1.1); } }
         #loading-msg { color: #e74c3c; font-weight: bold; display: none; margin-top: 10px; }
+
+        /* List Panel */
         #list-panel { position: fixed; left: -400px; top: 0; bottom: 0; width: 300px; background: rgba(44, 62, 80, 0.98); padding: 20px; transition: 0.3s; z-index: 50; overflow-y: auto; box-shadow: 5px 0 15px rgba(0,0,0,0.5); color: #eee; }
         #list-panel.open { left: 300px; } 
         #list-panel h3 { color: #e74c3c; border-bottom: 1px solid #555; padding-bottom: 10px; }
@@ -117,6 +107,7 @@
         .timestamp-list div:last-child { border-bottom: none; }
         .del-btn { background: #c0392b; color: white; border: none; padding: 5px; font-size: 0.8rem; width: 100%; margin-top: 10px; border-radius: 4px; display: none; }
         .del-btn:hover { background: #a93226; }
+        #input_video { display: none; }
     </style>
 </head>
 <body>
@@ -149,32 +140,22 @@
 
     <div id="main-content">
         <img src="1.jpg" id="monitor-image" class="side-img" alt="Surveillance Monitor">
-        
         <div id="center-stage">
             <div id="placeholder" style="text-align:center;">
                 <h1 style="color:white;">System Standby</h1>
                 <p style="color:#aaa;">Please enter your Name and ID to start.</p>
             </div>
-            <div id="status-panel" style="display:none;">
-                <div id="status-audio" class="status-box">🎤 AI Standby</div>
-                <div id="status-video" class="status-box">🤐 0%</div>
-            </div>
             
             <div id="camera-wrapper">
                 <canvas id="output_canvas"></canvas>
                 <div id="alert-overlay">🚨 DETECTED!</div>
-            </div>
-
-            <div id="live-monitor-overlay">
-                <div class="monitor-header">🔴 LIVE MONITOR - AI FEED</div>
-                <div class="monitor-content">
-                    <div id="dsp-placeholder">
-                        [AI DSP Graph Placeholder]<br>
-                        Waiting for data stream...
-                    </div>
+                
+                <div id="inference-panel">
+                    <div id="inference-rows-container"></div>
+                    <div id="inference-time">Inference time: 0 ms</div>
                 </div>
-            </div>
 
+            </div>
         </div>
     </div>
     <video id="input_video" playsinline></video>
@@ -213,10 +194,6 @@
                 ret.delete();
                 return jsResult;
             }
-            getProperties() {
-                if (!this._module.get_properties && window.Module) { this._module = window.Module; }
-                return this._convertToOrdinaryJsObject(this._module.get_properties(), this._module.emcc_classification_properties_t.prototype);
-            }
             _arrayToHeap(data) {
                 let typedArray = new Float32Array(data);
                 let numBytes = typedArray.length * typedArray.BYTES_PER_ELEMENT;
@@ -224,14 +201,6 @@
                 let heapBytes = new Uint8Array(this._module.HEAPU8.buffer, ptr, numBytes);
                 heapBytes.set(new Uint8Array(typedArray.buffer));
                 return { ptr: ptr, buffer: heapBytes };
-            }
-            _convertToOrdinaryJsObject(emboundObj, prototype) {
-                let newObj = { };
-                for (const key of Object.getOwnPropertyNames(prototype)) {
-                    const descriptor = Object.getOwnPropertyDescriptor(prototype, key);
-                    if (descriptor && typeof descriptor.get === 'function') { newObj[key] = emboundObj[key]; }
-                }
-                return newObj;
             }
         }
     </script>
@@ -288,17 +257,15 @@
                 btn.style.display = 'none';
                 document.getElementById('btn-stop').style.display = 'block';
                 document.getElementById('placeholder').style.display = 'none';
-                
-                // [수정됨] 카메라와 함께 모니터 오버레이도 표시
                 document.getElementById('camera-wrapper').style.display = 'block';
-                document.getElementById('live-monitor-overlay').style.display = 'flex'; 
+                
+                // Show Monitor Panel
+                document.getElementById('inference-panel').style.display = 'flex';
 
-                document.getElementById('status-panel').style.display = 'flex';
                 isRunning = true;
-
             } catch (err) {
                 console.error(err);
-                alert("Error initializing AI: " + err.message);
+                alert("Error: " + err.message);
                 location.reload();
             }
         }
@@ -307,9 +274,9 @@
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const source = audioContext.createMediaStreamSource(stream);
-            const sampleRate = 16000; 
+            const targetRate = 16000; 
             const processor = audioContext.createScriptProcessor(4096, 1, 1);
-            let audioBuffer = new Float32Array(sampleRate * 1); 
+            let audioBuffer = new Float32Array(targetRate * 1); 
             let bufferIdx = 0;
 
             source.connect(processor);
@@ -318,9 +285,11 @@
             processor.onaudioprocess = function(e) {
                 if (!isRunning) return;
                 const inputData = e.inputBuffer.getChannelData(0);
-                for (let i = 0; i < inputData.length; i++) {
+                const downsampled = downsampleBuffer(inputData, audioContext.sampleRate, targetRate);
+
+                for (let i = 0; i < downsampled.length; i++) {
                     if (bufferIdx < audioBuffer.length) {
-                        audioBuffer[bufferIdx] = inputData[i];
+                        audioBuffer[bufferIdx] = downsampled[i];
                         bufferIdx++;
                     } else {
                         runClassification(audioBuffer);
@@ -330,34 +299,72 @@
             };
         }
 
+        function downsampleBuffer(buffer, sampleRate, outSampleRate) {
+            if (outSampleRate == sampleRate) return buffer;
+            var sampleRateRatio = sampleRate / outSampleRate;
+            var newLength = Math.round(buffer.length / sampleRateRatio);
+            var result = new Float32Array(newLength);
+            var offsetResult = 0;
+            var offsetBuffer = 0;
+            while (offsetResult < result.length) {
+                var nextOffsetBuffer = Math.round((offsetResult + 1) * sampleRateRatio);
+                var accum = 0, count = 0;
+                for (var i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
+                    accum += buffer[i];
+                    count++;
+                }
+                result[offsetResult] = accum / count;
+                offsetResult++;
+                offsetBuffer = nextOffsetBuffer;
+            }
+            return result;
+        }
+
         async function runClassification(data) {
             try {
                 if(!classifier) return;
+                let start = Date.now();
                 let results = classifier.classify(data);
-                let koreanProb = 0;
-                let topLabel = "Noise";
+                let latency = Date.now() - start;
                 
+                updateMonitorUI(results.results, latency);
+
+                let koreanProb = 0;
                 results.results.forEach(r => {
                     if (r.label === TARGET_LABEL) koreanProb = r.value;
-                    if (r.value > 0.5) topLabel = r.label;
                 });
 
-                // ★ 여기에 Edge Impulse 그래프 업데이트 로직을 추가하면 됩니다 ★
-                // 예: updateGraph(data, results);
-
-                const audioStatus = document.getElementById('status-audio');
                 if (koreanProb > CONFIDENCE_THRESHOLD) {
                     lastKoreanTime = Date.now();
-                    audioStatus.innerText = `🔊 KOREAN (${(koreanProb*100).toFixed(0)}%)`;
-                    audioStatus.className = "status-box active-red";
                     checkViolation();
-                } else {
-                    if (Date.now() - lastKoreanTime > 1500) {
-                        audioStatus.innerText = `🎤 ${topLabel}`;
-                        audioStatus.className = "status-box";
-                    }
                 }
             } catch (ex) { console.log("Classification error:", ex); }
+        }
+
+        // [NEW] GitHub Source Style Monitor Logic
+        function updateMonitorUI(results, latency) {
+            const container = document.getElementById('inference-rows-container');
+            
+            // Generate rows if simpler (or reuse existing)
+            // To prevent flickering, we just rebuild string or use existing
+            // Here we rebuild for simplicity as element count is small
+            let html = '';
+            results.forEach(r => {
+                const percent = (r.value * 100).toFixed(0);
+                // Highlight Red if Korean
+                const color = (r.label === TARGET_LABEL && r.value > CONFIDENCE_THRESHOLD) ? '#ff0000' : '#e74c3c';
+                
+                html += `
+                <div class="inference-row">
+                    <div class="inference-label" style="color:${color}">${r.label}</div>
+                    <div class="inference-bar-bg">
+                        <div class="inference-bar-fill" style="width:${percent}%; background-color:${color}"></div>
+                    </div>
+                    <div class="inference-score">${(r.value).toFixed(2)}</div>
+                </div>`;
+            });
+            container.innerHTML = html;
+            document.getElementById('inference-time').innerText = `Inference time: ${latency} ms`;
         }
 
         async function startFaceMesh() {
@@ -376,20 +383,13 @@
                     const sW = videoElement.videoWidth; const sH = videoElement.videoHeight;
                     const upper = lm[13]; const lower = lm[14];
                     const dist = Math.abs(upper.y - lower.y) * 100;
-                    const MAX_OPEN_DIST = 30; 
-                    let percent = (dist / MAX_OPEN_DIST) * 100;
-                    percent = Math.max(0, Math.min(percent, 100));
+                    
                     const MOUTH_LIMIT = 5.0; 
                     const isMouthOpenNow = (dist > MOUTH_LIMIT);
-                    const vStatus = document.getElementById('status-video');
+
                     if (isMouthOpenNow) {
                         lastMouthOpenTime = Date.now(); 
-                        vStatus.innerText = `👄 ${percent.toFixed(0)}% (Open)`;
-                        vStatus.className = "status-box active-green"; 
                         checkViolation(); 
-                    } else {
-                        vStatus.innerText = `🤐 ${percent.toFixed(0)}% (Closed)`;
-                        vStatus.className = "status-box";
                     }
                     const zoom = 4.0; const cw = sW/zoom; const ch = sH/zoom;
                     let cx = ((upper.x + lower.x)/2 * sW) - cw/2;
@@ -417,14 +417,15 @@
             const overlay = document.getElementById('alert-overlay');
             overlay.style.display = 'block';
             overlay.innerText = `🚨 DETECTED!`;
-            document.getElementById('status-video').className = "status-box active-red";
             setTimeout(() => overlay.style.display = 'none', 2000);
+
             const img = document.getElementById('monitor-image');
             img.src = "2.jpg"; 
             img.classList.add('alert-mode');
             if (alertImageTimeout) clearTimeout(alertImageTimeout);
             alertImageTimeout = setTimeout(() => { img.src = "1.jpg"; img.classList.remove('alert-mode'); }, 5000);
-            db.collection("detections").add({ name: userName, studentId: userId, reason: "Korean (AI) + Mouth Open", timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+
+            db.collection("detections").add({ name: userName, studentId: userId, reason: "Korean + Mouth Open", timestamp: firebase.firestore.FieldValue.serverTimestamp() });
         }
 
         function toggleList() { document.getElementById('list-panel').classList.toggle('open'); }
@@ -443,7 +444,7 @@
             const name = nameInput.value.trim();
             const id = idInput.value.trim();
             if (!name || !id) { alert("Please enter both Name and ID."); return; }
-            db.collection("detections").add({ name: name, studentId: id, reason: "Manual Add (Admin)", timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { alert("✅ Added Successfully!"); nameInput.value = ""; idInput.value = ""; }).catch((error) => { alert("Error: " + error.message); });
+            db.collection("detections").add({ name: name, studentId: id, reason: "Manual Add", timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { alert("✅ Added Successfully!"); nameInput.value = ""; idInput.value = ""; }).catch((error) => { alert("Error: " + error.message); });
         }
         async function deleteAllData() {
             if (confirm("⚠️ WARNING: Delete ALL detection records?")) {
