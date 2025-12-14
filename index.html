@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Korean Killer (Final Engine)</title>
+    <title>Korean Killer - Fixed</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -13,8 +13,9 @@
     <script src="edge-impulse-standalone.js"></script>
 
     <style>
-        /* [기존 스타일 100% 유지] */
+        /* [기존 디자인 완벽 유지] */
         body { margin: 0; padding: 0; display: flex; height: 100vh; font-family: 'Segoe UI', sans-serif; overflow: hidden; background: #1a1a1a; color: #eee; }
+        
         #sidebar { width: 260px; background-color: #2c3e50; padding: 20px; display: flex; flex-direction: column; gap: 15px; z-index: 100; box-shadow: 2px 0 10px rgba(0,0,0,0.5); flex-shrink: 0; }
         .title-container { text-align: center; margin-bottom: 10px; border-bottom: 1px solid #444; padding-bottom: 20px; }
         #sidebar h2 { margin: 0; color: #bdc3c7; font-size: 1rem; text-transform: uppercase; letter-spacing: 3px; font-weight: normal; }
@@ -28,21 +29,65 @@
         #prof-controls { border-top: 1px solid #7f8c8d; padding-top: 15px; display: none; }
         #prof-controls p { color: #e74c3c; font-size: 0.9rem; margin-top: 0; }
         .btn-delete-all { background-color: #e74c3c !important; border: 2px solid white !important; margin-top: 10px; }
-        #main-content { flex-grow: 1; position: relative; background: #000; display: flex; justify-content: center; align-items: center; gap: 60px; background-image: radial-gradient(circle at 50% 50%, rgba(231, 76, 60, 0.15) 0%, transparent 60%), linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%), repeating-linear-gradient(45deg, #1a1a1a 0, #1a1a1a 10px, #222 10px, #222 20px); }
-        .side-img { height: 60%; max-height: 600px; width: auto; object-fit: contain; border: 2px solid #444; box-shadow: 0 0 30px rgba(0,0,0,0.8); opacity: 0.9; transition: 0.3s; }
+
+        /* Main Content */
+        #main-content { flex-grow: 1; position: relative; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; background-image: radial-gradient(circle at 50% 50%, rgba(231, 76, 60, 0.15) 0%, transparent 60%), linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%), repeating-linear-gradient(45deg, #1a1a1a 0, #1a1a1a 10px, #222 10px, #222 20px); }
+
+        /* [요청하신 버튼 배치] 이미지 바로 위 */
+        #monitor-controls {
+            display: flex; gap: 10px; margin-bottom: 10px; z-index: 50;
+        }
+        .ctrl-btn {
+            background: rgba(0,0,0,0.7); border: 1px solid #555; color: #ddd; 
+            padding: 8px 15px; border-radius: 20px; font-size: 0.85rem; cursor: pointer; 
+            transition: 0.2s; display: flex; align-items: center; gap: 5px;
+        }
+        .ctrl-btn:hover, .ctrl-btn.active { background: #3b82f6; border-color: #60a5fa; color: white; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+
+        /* 이미지 컨테이너 */
+        #visual-wrapper { position: relative; display: flex; justify-content: center; align-items: center; }
+        .side-img { height: 60vh; max-height: 600px; width: auto; object-fit: contain; border: 2px solid #444; box-shadow: 0 0 30px rgba(0,0,0,0.8); opacity: 0.9; transition: 0.3s; }
         .side-img.alert-mode { border-color: #e74c3c; box-shadow: 0 0 50px rgba(231, 76, 60, 0.8); transform: scale(1.05); }
-        #center-stage { position: relative; display: flex; justify-content: center; align-items: center; width: 500px; height: 500px; }
+
+        #center-stage { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; height: 500px; display: flex; justify-content: center; align-items: center; }
+        
         #camera-wrapper { display: none; width: 500px; height: 500px; border-radius: 50%; overflow: hidden; border: 5px solid #e74c3c; position: relative; background: black; box-shadow: 0 0 30px rgba(231, 76, 60, 0.6), inset 0 0 50px rgba(231, 76, 60, 0.4); }
         #camera-wrapper::before { content: ''; position: absolute; top: 50%; left: 50%; width: 120%; height: 120%; transform: translate(-50%, -50%); background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><circle cx="250" cy="250" r="240" fill="none" stroke="rgba(231, 76, 60, 0.5)" stroke-width="2" stroke-dasharray="10 5"/><circle cx="250" cy="250" r="180" fill="none" stroke="rgba(231, 76, 60, 0.3)" stroke-width="1"/><path d="M250 50 L250 450 M50 250 L450 250" stroke="rgba(231, 76, 60, 0.4)" stroke-width="1"/><circle cx="250" cy="250" r="50" fill="rgba(231, 76, 60, 0.2)"/></svg>'); background-repeat: no-repeat; background-position: center; pointer-events: none; z-index: 1; }
         canvas { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); position: relative; z-index: 0; }
-        #input_video { display: none; }
+        
+        /* Status Panel */
         #status-panel { position: absolute; top: -60px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 10; width: 100%; justify-content: center; }
         .status-box { background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 30px; color: #aaa; font-weight: bold; border: 1px solid #555; display: flex; align-items: center; gap: 10px; transition: 0.3s; white-space: nowrap; }
         .active-red { color: white !important; background: rgba(255, 0, 0, 0.9) !important; border-color: red !important; box-shadow: 0 0 20px red; }
         .active-green { color: white !important; background: rgba(0, 200, 0, 0.9) !important; border-color: lime !important; box-shadow: 0 0 15px lime; }
+        
         #alert-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 0, 0, 0.95); color: white; padding: 30px 60px; border-radius: 50px; font-size: 3rem; font-weight: bold; display: none; z-index: 200; box-shadow: 0 0 100px red; animation: pulse 0.3s infinite alternate; text-align: center; white-space: nowrap; }
         @keyframes pulse { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(1.1); } }
-        #loading-msg { color: #e74c3c; font-weight: bold; display: none; margin-top: 10px; }
+
+        /* [NEW] Settings Panel */
+        #panel-settings {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 280px; background: rgba(20, 20, 20, 0.95); border: 1px solid #444;
+            border-radius: 12px; padding: 20px; z-index: 60; display: none;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+        .panel-header { display: flex; justify-content: space-between; margin-bottom: 15px; color: #3b82f6; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 5px; }
+        .setting-row { margin-bottom: 12px; }
+        .setting-label { display: flex; justify-content: space-between; font-size: 0.8rem; color: #aaa; margin-bottom: 4px; }
+        input[type=range] { width: 100%; height: 4px; background: #333; accent-color: #3b82f6; cursor: pointer; }
+
+        /* [NEW] Logs Panel */
+        #panel-logs {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 320px; height: 350px; background: rgba(20, 20, 20, 0.95); border: 1px solid #444;
+            border-radius: 12px; padding: 15px; z-index: 60; display: none;
+            flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+        #log-container { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+        .log-entry { font-size: 0.75rem; padding: 6px; background: #333; border-radius: 4px; display: flex; justify-content: space-between; color: #ccc; border-left: 3px solid #555; }
+        .log-entry.violation { background: rgba(220, 38, 38, 0.2); border-left-color: #dc2626; color: white; }
+
+        /* List Panel (Original) */
         #list-panel { position: fixed; left: -400px; top: 0; bottom: 0; width: 300px; background: rgba(44, 62, 80, 0.98); padding: 20px; transition: 0.3s; z-index: 50; overflow-y: auto; box-shadow: 5px 0 15px rgba(0,0,0,0.5); color: #eee; }
         #list-panel.open { left: 300px; } 
         #list-panel h3 { color: #e74c3c; border-bottom: 1px solid #555; padding-bottom: 10px; }
@@ -54,36 +99,12 @@
         .count-badge { background: #e67e22; color: white; padding: 4px 10px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 0.9rem; min-width: 25px; text-align: center; }
         .timestamp-list { display: none; margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; font-size: 0.8rem; color: #aaa; max-height: 150px; overflow-y: auto; }
         .del-btn { background: #c0392b; color: white; border: none; padding: 5px; font-size: 0.8rem; width: 100%; margin-top: 10px; border-radius: 4px; display: none; }
-        ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: #222; } ::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
-
-        /* [NEW] 2개 버튼 및 창 스타일 (React UI 이식) */
-        #monitor-controls {
-            position: absolute; top: -50px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 10px; z-index: 50; width: 100%; justify-content: center;
-        }
-        .ctrl-btn {
-            background: #2c3e50; border: 1px solid #555; color: #ddd; padding: 6px 15px; 
-            border-radius: 20px; font-size: 0.8rem; cursor: pointer; transition: 0.2s;
-            display: flex; align-items: center; gap: 5px;
-        }
-        .ctrl-btn:hover, .ctrl-btn.active { background: #3b82f6; border-color: #60a5fa; color: white; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
-
-        /* 설정창/로그창 Overlay */
-        .overlay-panel {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(20, 20, 20, 0.95); border: 1px solid #444; border-radius: 12px; 
-            padding: 20px; z-index: 60; display: none; flex-direction: column;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.8); width: 280px;
-        }
-        .panel-header { display: flex; justify-content: space-between; margin-bottom: 15px; color: #3b82f6; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 5px; }
-        .setting-row { margin-bottom: 12px; }
-        .setting-label { display: flex; justify-content: space-between; font-size: 0.8rem; color: #aaa; margin-bottom: 4px; }
-        .setting-val { color: #60a5fa; font-family: monospace; }
-        input[type=range] { width: 100%; height: 4px; background: #333; accent-color: #3b82f6; cursor: pointer; }
         
-        #log-container { height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
-        .log-entry { font-size: 0.75rem; padding: 6px; background: #333; border-radius: 4px; display: flex; justify-content: space-between; color: #ccc; border-left: 3px solid #555; }
-        .log-entry.violation { background: rgba(220, 38, 38, 0.2); border-left-color: #dc2626; color: white; }
+        #input_video { display: none; }
+        #loading-msg { color: #e74c3c; font-weight: bold; display: none; margin-top: 10px; }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: #222; } ::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
     </style>
 </head>
 <body>
@@ -116,60 +137,59 @@
     </div>
 
     <div id="main-content">
-        <div style="position:relative;">
-            <div id="monitor-controls">
-                <button class="ctrl-btn" onclick="togglePanel('settings')">⚙️ Settings</button>
-                <button class="ctrl-btn" onclick="togglePanel('logs')">📊 Live Log</button>
-            </div>
-            
-            <img src="1.jpg" id="monitor-image" class="side-img" alt="Surveillance Monitor">
+        <div id="monitor-controls">
+            <button class="ctrl-btn" onclick="togglePanel('settings')">⚙️ Settings</button>
+            <button class="ctrl-btn" onclick="togglePanel('logs')">📊 Live Log</button>
         </div>
 
-        <div id="center-stage">
-            <div id="placeholder" style="text-align:center;">
-                <h1 style="color:white;">System Standby</h1>
-                <p style="color:#aaa;">Please enter your Name and ID to start.</p>
-            </div>
-
-            <div id="status-panel" style="display:none;">
-                <div id="status-audio" class="status-box">🎤 Standby</div>
-                <div id="status-video" class="status-box">🤐 0%</div>
-            </div>
-
-            <div id="camera-wrapper">
-                <canvas id="output_canvas"></canvas>
-                <div id="alert-overlay">🚨 DETECTED!</div>
-            </div>
-
-            <div id="panel-settings" class="overlay-panel">
-                <div class="panel-header"><span>SETTINGS</span><span style="cursor:pointer" onclick="togglePanel('settings')">✕</span></div>
-                <div class="setting-row">
-                    <div class="setting-label"><span>AI Confidence</span><span id="txt-conf">50%</span></div>
-                    <input type="range" min="1" max="99" value="50" oninput="updateSettings('confidence', this.value)">
+        <div id="visual-wrapper">
+            <img src="1.jpg" id="monitor-image" class="side-img" alt="Surveillance Monitor">
+            
+            <div id="center-stage">
+                <div id="placeholder" style="text-align:center;">
+                    <h1 style="color:white;">System Standby</h1>
+                    <p style="color:#aaa;">Please enter your Name and ID to start.</p>
                 </div>
-                <div class="setting-row">
-                    <div class="setting-label"><span>Mouth Open (Gap)</span><span id="txt-gap">1.0%</span></div>
-                    <input type="range" min="1" max="50" value="10" oninput="updateSettings('mouthOpen', this.value)">
+                
+                <div id="status-panel" style="display:none;">
+                    <div id="status-audio" class="status-box">🎤 Listen...</div>
+                    <div id="status-video" class="status-box">🤐 0%</div>
                 </div>
-                <div class="setting-row">
-                    <div class="setting-label"><span>Lip Movement</span><span id="txt-move">Lv 20</span></div>
-                    <input type="range" min="1" max="100" value="20" oninput="updateSettings('lipMovement', this.value)">
-                </div>
-                <div class="setting-row">
-                    <div class="setting-label"><span>Strictness</span><span id="txt-strict">3 frames</span></div>
-                    <input type="range" min="1" max="10" value="3" oninput="updateSettings('strictness', this.value)">
-                </div>
-            </div>
 
-            <div id="panel-logs" class="overlay-panel">
-                <div class="panel-header"><span>LIVE LOGS</span><span style="cursor:pointer" onclick="togglePanel('logs')">✕</span></div>
-                <div id="log-container">
-                    <div style="text-align:center; color:#555; margin-top:20px;">Waiting for data...</div>
+                <div id="camera-wrapper">
+                    <canvas id="output_canvas"></canvas>
+                    <div id="alert-overlay">🚨 DETECTED!</div>
+                </div>
+
+                <div id="panel-settings" class="overlay-panel">
+                    <div class="panel-header"><span>SETTINGS</span><span style="cursor:pointer" onclick="togglePanel('settings')">✕</span></div>
+                    <div class="setting-row">
+                        <div class="setting-label"><span>AI Confidence</span><span id="txt-conf">50%</span></div>
+                        <input type="range" min="1" max="99" value="50" oninput="updateSettings('confidence', this.value)">
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-label"><span>Mouth Open (Gap)</span><span id="txt-gap">1.0%</span></div>
+                        <input type="range" min="1" max="50" value="10" oninput="updateSettings('mouthOpen', this.value)">
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-label"><span>Lip Movement</span><span id="txt-move">Lv 20</span></div>
+                        <input type="range" min="1" max="100" value="20" oninput="updateSettings('lipMovement', this.value)">
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-label"><span>Strictness</span><span id="txt-strict">3 frames</span></div>
+                        <input type="range" min="1" max="10" value="3" oninput="updateSettings('strictness', this.value)">
+                    </div>
+                </div>
+
+                <div id="panel-logs" class="overlay-panel">
+                    <div class="panel-header"><span>LIVE LOGS</span><span style="cursor:pointer" onclick="togglePanel('logs')">✕</span></div>
+                    <div id="log-container">
+                        <div style="text-align:center; color:#555; margin-top:20px;">Waiting for data...</div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-
     <video id="input_video" playsinline></video>
 
     <script>
@@ -230,30 +250,19 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // -------------------------
-        // STATE VARIABLES
-        // -------------------------
+        // Variables
         let isRunning = false;
         let userName = "", userId = "";
-        let classifier = null; 
+        let classifier = null;
+        let audioCtx = null;
         
-        // [React Settings State]
-        const settings = {
-            confidence: 0.50,
-            mouthOpen: 0.01,
-            lipMovement: 0.002,
-            strictness: 3
-        };
-
-        // Logic Variables
+        const settings = { confidence: 0.50, mouthOpen: 0.01, lipMovement: 0.002, strictness: 3 };
         const lipHistory = [];
         const violationQueue = [];
         let alertTimeout = null;
         let currentAudioResult = { label: 'noise', score: 0 };
 
-        // -------------------------
-        // UI FUNCTIONS (Buttons & Panels)
-        // -------------------------
+        // UI Controls
         function togglePanel(name) {
             const ps = document.getElementById('panel-settings');
             const pl = document.getElementById('panel-logs');
@@ -278,14 +287,12 @@
             const now = new Date().toLocaleTimeString('en-US',{hour12:false});
             const div = document.createElement('div');
             div.className = `log-entry ${isViolation ? 'violation' : ''}`;
-            div.innerHTML = `<span>${now} ${label.toUpperCase()}</span><span>${visual} / ${Math.round(score*100)}%</span>`;
+            div.innerHTML = `<span>[${now}] ${label.toUpperCase()}</span><span>${visual} / ${Math.round(score*100)}%</span>`;
             container.insertBefore(div, container.firstChild);
             if(container.children.length>20) container.removeChild(container.lastChild);
         }
 
-        // -------------------------
-        // REACT LOGIC -> JS LOGIC (Math)
-        // -------------------------
+        // Logic Helpers
         function calculateStandardDeviation(arr) {
             if (arr.length === 0) return 0;
             const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
@@ -293,9 +300,10 @@
             return Math.sqrt(variance);
         }
 
-        // [CRITICAL] Audio Downsampler (48kHz -> 16kHz for Edge Impulse)
+        // [CRITICAL FIX] Audio Downsampling
         function downsampleBuffer(buffer, sampleRate, outSampleRate) {
             if (outSampleRate == sampleRate) return buffer;
+            if (outSampleRate > sampleRate) throw "Downsampling rate show be smaller than original sample rate";
             var sampleRateRatio = sampleRate / outSampleRate;
             var newLength = Math.round(buffer.length / sampleRateRatio);
             var result = new Float32Array(newLength);
@@ -309,9 +317,7 @@
             return result;
         }
 
-        // -------------------------
-        // SYSTEM STARTUP
-        // -------------------------
+        // System Start
         async function startSystem() {
             userName = document.getElementById('input-name').value;
             userId = document.getElementById('input-id').value;
@@ -322,20 +328,17 @@
             btn.disabled = true; msg.style.display = 'block';
 
             try {
-                // 1. Edge Impulse Init
-                msg.innerText = "Step 1: Loading AI Brain...";
+                // 1. Edge Impulse
                 classifier = new EdgeImpulseClassifier();
                 await classifier.init();
                 
-                // 2. Audio Processing (Replaced WebSpeechAPI with Edge Impulse)
-                msg.innerText = "Step 2: Connecting Audio...";
+                // 2. Audio (Fixed Logic)
                 await startAudioProcessing();
 
-                // 3. Vision (FaceMesh)
-                msg.innerText = "Step 3: Connecting Camera...";
+                // 3. Vision
                 await startFaceMesh();
 
-                // UI Transition
+                // UI
                 msg.style.display = 'none';
                 btn.style.display = 'none';
                 document.getElementById('btn-stop').style.display = 'block';
@@ -344,8 +347,7 @@
                 document.getElementById('status-panel').style.display = 'flex';
                 
                 isRunning = true;
-                // Auto-open logs to show activity
-                togglePanel('logs');
+                togglePanel('logs'); // 로그창 자동 열림
 
             } catch (err) {
                 console.error(err);
@@ -355,54 +357,72 @@
         }
 
         async function startAudioProcessing() {
+            // [FIXED] Audio Context Resume for Browser Policy
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+            
+            // Critical: Resume context if suspended
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
+
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const source = audioContext.createMediaStreamSource(stream);
+            const source = audioCtx.createMediaStreamSource(stream);
             
             // Edge Impulse Standard
             const targetRate = 16000; 
-            const processor = audioContext.createScriptProcessor(4096, 1, 1);
-            let audioBuffer = new Float32Array(targetRate * 1); // 1 sec buffer
-            let bufferIdx = 0;
+            const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+            
+            // Ring Buffer
+            const bufferSize = 16000; // 1 second window
+            let circularBuffer = new Float32Array(bufferSize);
+            let writeIndex = 0;
 
             source.connect(processor);
-            processor.connect(audioContext.destination);
+            processor.connect(audioCtx.destination);
 
             processor.onaudioprocess = function(e) {
                 if (!isRunning) return;
-                const inputData = e.inputBuffer.getChannelData(0);
-                // Apply Downsampling (Fixes "Audio not working")
-                const downsampled = downsampleBuffer(inputData, audioContext.sampleRate, targetRate);
                 
+                const inputData = e.inputBuffer.getChannelData(0);
+                const downsampled = downsampleBuffer(inputData, audioCtx.sampleRate, targetRate);
+                
+                // Fill circular buffer
                 for (let i = 0; i < downsampled.length; i++) {
-                    if (bufferIdx < audioBuffer.length) { 
-                        audioBuffer[bufferIdx] = downsampled[i]; 
-                        bufferIdx++; 
-                    } else {
-                        runClassification(audioBuffer);
-                        bufferIdx = 0;
-                    }
+                    circularBuffer[writeIndex] = downsampled[i];
+                    writeIndex = (writeIndex + 1) % bufferSize;
                 }
+
+                // Create a linear buffer for classification (ordered)
+                let linearBuffer = new Float32Array(bufferSize);
+                for (let i = 0; i < bufferSize; i++) {
+                    linearBuffer[i] = circularBuffer[(writeIndex + i) % bufferSize];
+                }
+
+                runClassification(linearBuffer);
             };
         }
 
         async function runClassification(data) {
             if(!classifier) return;
-            let results = classifier.classify(data);
-            
-            // Find Top Result
-            let top = results.results.reduce((p, c) => p.value > c.value ? p : c);
-            currentAudioResult = { label: top.label, score: top.value };
+            try {
+                let results = classifier.classify(data);
+                // Top result
+                let top = results.results.reduce((p, c) => p.value > c.value ? p : c);
+                currentAudioResult = { label: top.label, score: top.value };
 
-            // Update EXISTING UI (status-audio)
-            const audioBox = document.getElementById('status-audio');
-            const percent = Math.round(top.value * 100);
-            audioBox.innerText = `🎤 ${top.label.toUpperCase()} (${percent}%)`;
-            
-            if(top.label === 'korean' && top.value > settings.confidence) {
-                audioBox.className = "status-box active-red";
-            } else {
-                audioBox.className = "status-box";
+                // Update Status UI
+                const audioBox = document.getElementById('status-audio');
+                const percent = Math.round(top.value * 100);
+                audioBox.innerText = `🎤 ${top.label.toUpperCase()} (${percent}%)`;
+                
+                if(top.label === 'korean' && top.value > settings.confidence) {
+                    audioBox.className = "status-box active-red";
+                } else {
+                    audioBox.className = "status-box";
+                }
+            } catch(e) {
+                console.log("Classify Error", e);
             }
         }
 
@@ -425,7 +445,7 @@
                     const lm = results.multiFaceLandmarks[0];
                     const upper = lm[13]; const lower = lm[14];
                     
-                    // [React Logic] Calculate Gap & Movement
+                    // Logic: Gap & Movement
                     const gap = lower.y - upper.y;
                     lipHistory.push(gap);
                     if (lipHistory.length > 5) lipHistory.shift();
@@ -440,12 +460,12 @@
                     let cy = ((upper.y + lower.y)/2 * sH) - ch/2;
                     ctx.drawImage(results.image, cx, cy, cw, ch, 0, 0, 500, 500);
 
-                    // Decision Logic
+                    // Decision
                     if (gap > settings.mouthOpen) {
                         visualState = movement > settings.lipMovement ? "Speaking" : "Open";
                     }
 
-                    // Combined Detection
+                    // Combined Check
                     const isKorean = currentAudioResult.label === 'korean' && currentAudioResult.score > settings.confidence;
                     const isMouthActive = visualState === "Speaking";
                     
@@ -453,17 +473,15 @@
                     else violationQueue.push(0);
                     if(violationQueue.length > 10) violationQueue.shift();
 
-                    // Check Strictness
                     if(violationQueue.filter(v => v===1).length >= settings.strictness) {
                         triggerDetection();
                         addLog(currentAudioResult.label, currentAudioResult.score, visualState, true);
                     } else if (Math.random() < 0.05) {
-                        // Randomly log healthy state
                         addLog(currentAudioResult.label, currentAudioResult.score, visualState, false);
                     }
                 }
 
-                // Update EXISTING UI (status-video)
+                // Update Video Status
                 const vStatus = document.getElementById('status-video');
                 vStatus.innerText = `${visualState === 'Speaking' ? '🗣️' : '🤐'} ${gapDisplay.toFixed(0)}%`;
                 vStatus.className = visualState === 'Speaking' ? "status-box active-green" : "status-box";
@@ -498,7 +516,7 @@
             }, 3000);
         }
 
-        // --- Original Helper Functions ---
+        // Original Helpers
         function toggleList() { document.getElementById('list-panel').classList.toggle('open'); }
         function authProfessor() { if (prompt("Password:") === "kyj") { document.getElementById('prof-controls').style.display='block'; document.getElementById('btn-prof').style.display='none'; loadList(); } }
         function manualAdd() { const n=document.getElementById('add-name').value; const i=document.getElementById('add-id').value; if(n&&i) db.collection("detections").add({name:n, studentId:i, timestamp:firebase.firestore.FieldValue.serverTimestamp()}); }
